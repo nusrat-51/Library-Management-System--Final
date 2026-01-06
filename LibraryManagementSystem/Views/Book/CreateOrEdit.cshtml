@@ -1,0 +1,123 @@
+﻿@model LibraryManagementSystem.Models.Book
+@{
+    var isEdit = Model.Id != 0;
+    ViewData["Title"] = isEdit ? "Edit Book" : "Create Book";
+    ViewData["ActivePage"] = "Books"; // Highlights "Books Management" in sidebar
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-5">
+    <div>
+        <h3 class="mb-1 fw-bold" style="color: var(--primary);">@ViewData["Title"]</h3>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a asp-controller="Dashboard" asp-action="Index">Dashboard</a></li>
+                <li class="breadcrumb-item"><a asp-controller="Book" asp-action="Index">Books Management</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@(isEdit ? "Edit" : "Create")</li>
+            </ol>
+        </nav>
+    </div>
+    <a asp-controller="Book" asp-action="Index" class="btn btn-outline-secondary shadow-sm">
+        <i class="bi bi-arrow-left me-2"></i>Back to List
+    </a>
+</div>
+
+<!-- Form Card -->
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <div class="dashboard-card">
+            <!-- Matches your dashboard cards -->
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <div class="card-icon bg-primary d-inline-flex mb-3">
+                        <i class="bi bi-book fs-3"></i>
+                    </div>
+                    <h4 class="fw-semibold" style="color: var(--primary);">Book Details</h4>
+                    <p class="text-muted">Fill in the information below to @(isEdit ? "update" : "add a new") book.</p>
+                </div>
+
+                <form asp-action="CreateOrEdit" method="post" class="needs-validation" novalidate>
+                    <input type="hidden" asp-for="Id" />
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label asp-for="Title" class="form-label fw-semibold"></label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-bookmark"></i></span>
+                                <input asp-for="Title" class="form-control" placeholder="Enter book title" required />
+                            </div>
+                            <span asp-validation-for="Title" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Author" class="form-label fw-semibold"></label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input asp-for="Author" class="form-control" placeholder="Enter author name" required />
+                            </div>
+                            <span asp-validation-for="Author" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="CategoryId" class="form-label fw-semibold">Category</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-tags"></i></span>
+                                <select asp-for="CategoryId" class="form-select" asp-items="@ViewBag.categoryId" required>
+                                    <option value="">-- Select Category --</option>
+                                </select>
+                            </div>
+                            <span asp-validation-for="CategoryId" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label asp-for="TotalCopies" class="form-label fw-semibold"></label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-layers"></i></span>
+                                <input asp-for="TotalCopies" type="number" class="form-control" min="1" placeholder="0" required />
+                            </div>
+                            <span asp-validation-for="TotalCopies" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label asp-for="AvailableCopies" class="form-label fw-semibold"></label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-check2-all"></i></span>
+                                <input asp-for="AvailableCopies" type="number" class="form-control" min="0" placeholder="0" required />
+                            </div>
+                            <span asp-validation-for="AvailableCopies" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <hr class="my-5 border-secondary-subtle">
+
+                    <!-- ২টা বাটন — আরও সুন্দর ও প্রফেশনাল -->
+                    <div class="d-flex justify-content-end  mt-5">
+                        <a asp-action="Index" class="btn btn-secondary btn-lg px-5 shadow-sm hover-lift">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg px-5 shadow-sm hover-lift">
+                            <i class="bi bi-check-circle me-2"></i>@(isEdit ? "Update Book" : "Save Book")
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <style>
+        /* Match input focus style with your search bar */
+        .form-control:focus, .form-select:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.15);
+        }
+        /* Larger icons and subtle hover on card */
+        .dashboard-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+        }
+    </style>
+}

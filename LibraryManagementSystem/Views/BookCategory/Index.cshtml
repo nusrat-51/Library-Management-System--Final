@@ -1,0 +1,263 @@
+﻿@using LibraryManagementSystem.Helper
+@using LibraryManagementSystem.Service
+@model IEnumerable<LibraryManagementSystem.Models.BookCategory>
+@inject ISignInHelper SignInHelper
+@inject IRolePermissionService RolePermissionService
+
+@{
+    ViewData["Title"] = "Book Categories";
+    ViewData["ActivePage"] = "BookCategory";
+    var role = SignInHelper.Roles;
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-5">
+    <div>
+        <h3 class="mb-1 fw-bold text-primary">Book Categories</h3>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a asp-controller="Dashboard" asp-action="Index">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Book Categories</li>
+            </ol>
+        </nav>
+    </div>
+    <a asp-action="CreateOrEdit" class="btn btn-primary shadow-sm btn-lg">
+        <i class="bi bi-plus-circle me-2"></i>New Category
+    </a>
+</div>
+
+<!-- Filters & Search -->
+<div class="dashboard-card p-4 mb-4">
+    <div class="row g-3 align-items-center">
+        <div class="col-md-5">
+            <div class="search-input-wrapper">
+                <i class="bi bi-search"></i>
+                <input type="text" id="searchInput" class="form-control" placeholder="Search by category name or description..." />
+            </div>
+        </div>
+        <div class="col-md-4">
+            <select id="activeFilter" class="form-select form-select-lg">
+                <option value="">All Status</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+        </div>
+        <div class="col-md-3 text-md-end">
+            <small class="text-muted" id="resultsCount">
+                Showing <span id="visibleCount">@Model.Count()</span> of @Model.Count() categories
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Categories Table -->
+<div class="data-table">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle" id="categoriesTable">
+            <thead>
+                <tr>
+                    <th class="text-muted fw-semibold">#</th>
+                    <th class="text-muted fw-semibold">Category Name</th>
+                    <th class="text-muted fw-semibold">Description</th>
+                    <th class="text-muted fw-semibold">Status</th>
+                    <th class="text-muted fw-semibold">Created At</th>
+                    <th class="text-muted fw-semibold text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                @{
+                    int index = 1;
+                    foreach (var category in Model)
+                    {
+                        <tr data-active="@category.IsActive.ToString().ToLower()">
+                            <td class="fw-medium index">@index</td>
+                            <td class="name fw-semibold">@category.CategoryName</td>
+
+                            <!-- ✅ FIXED: render fallback HTML properly (no logic change) -->
+                            <td class="description">
+                                @if (!string.IsNullOrWhiteSpace(category.Description))
+                                {
+                                    @category.Description
+                                }
+                                else
+                                {
+                                    <em class="text-muted">No description</em>
+                                }
+                            </td>
+
+                            <td>
+                                @if (category.IsActive)
+                                {
+                                    <span class="badge bg-success px-3 py-2 rounded-pill">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary px-3 py-2 rounded-pill">Inactive</span>
+                                }
+                            </td>
+
+                            <td>@category.CreatedAt.ToString("MMM dd, yyyy HH:mm")</td>
+
+                            <td>
+                                <div class="d-flex justify-content-center gap-2">
+
+                                    @if (RolePermissionService.CanDelete(role))
+                                    {
+                                    }
+
+                                    <form asp-action="Delete" asp-route-id="@category.Id" method="post" class="d-inline"
+                                          onsubmit="return confirm('Are you sure you want to delete this category?');">
+                                        <button type="submit" class="btn btn-danger btn-sm shadow-sm" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+
+                                    <!-- ✅ FIXED: close anchor properly (no nested <a>) -->
+                                    <a asp-action="CreateOrEdit" asp-route-id="@category.Id" class="btn btn-warning btn-sm shadow-sm" title="Edit">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+
+                                    <a asp-action="Details" asp-route-id="@category.Id" class="btn btn-info btn-sm shadow-sm" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+
+                                </div>
+                            </td>
+                        </tr>
+                        index++;
+                    }
+                }
+
+                @if (!Model.Any())
+                {
+                    <tr id="emptyRow">
+                        <td colspan="6" class="text-center py-5">
+                            <i class="bi bi-tags fs-1 text-muted d-block mb-3"></i>
+                            <p class="text-muted fw-medium">No categories found.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-between align-items-center p-4 border-top">
+        <small class="text-muted" id="pageInfo">Page 1 of 1</small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+        </nav>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const tableBody = document.getElementById('tableBody');
+        const rows = Array.from(tableBody.querySelectorAll('tr:not(#emptyRow)'));
+        const emptyRow = document.getElementById('emptyRow');
+        const searchInput = document.getElementById('searchInput');
+        const activeFilter = document.getElementById('activeFilter');
+        const visibleCount = document.getElementById('visibleCount');
+        const pageInfo = document.getElementById('pageInfo');
+        const pagination = document.getElementById('pagination');
+
+        const itemsPerPage = 10;
+        let currentPage = 1;
+
+        function filterAndPaginate() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const selectedActive = activeFilter.value; // '' or 'true' or 'false'
+
+            let filteredRows = rows.filter(row => {
+                const name = row.querySelector('.name')?.textContent.toLowerCase() || '';
+                const description = row.querySelector('.description')?.textContent.toLowerCase() || '';
+                const isActive = row.dataset.active;
+
+                const matchesSearch = name.includes(searchTerm) || description.includes(searchTerm);
+                const matchesActive = selectedActive === '' || isActive === selectedActive;
+
+                return matchesSearch && matchesActive;
+            });
+
+            visibleCount.textContent = filteredRows.length;
+
+            rows.forEach(r => r.style.display = 'none');
+            if (emptyRow) emptyRow.style.display = filteredRows.length === 0 ? '' : 'none';
+
+            const totalPages = Math.max(1, Math.ceil(filteredRows.length / itemsPerPage));
+            currentPage = Math.min(currentPage, totalPages);
+
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageRows = filteredRows.slice(start, end);
+
+            pageRows.forEach(row => row.style.display = '');
+
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+
+            pageRows.forEach((row, i) => {
+                row.querySelector('.index').textContent = start + i + 1;
+            });
+
+            pagination.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            // Previous
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = '<a class="page-link" href="#">Previous</a>';
+            if (currentPage > 1) prevLi.addEventListener('click', (e) => { e.preventDefault(); currentPage--; filterAndPaginate(); });
+            pagination.appendChild(prevLi);
+
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) {
+                    const li = document.createElement('li');
+                    li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                    li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                    if (i !== currentPage) li.addEventListener('click', (e) => { e.preventDefault(); currentPage = i; filterAndPaginate(); });
+                    pagination.appendChild(li);
+                } else if ((i === 2 && currentPage > 4) || (i === totalPages - 1 && currentPage < totalPages - 3)) {
+                    const dots = document.createElement('li');
+                    dots.className = 'page-item disabled';
+                    dots.innerHTML = '<a class="page-link">...</a>';
+                    pagination.appendChild(dots);
+                }
+            }
+
+            // Next
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = '<a class="page-link" href="#">Next</a>';
+            if (currentPage < totalPages) nextLi.addEventListener('click', (e) => { e.preventDefault(); currentPage++; filterAndPaginate(); });
+            pagination.appendChild(nextLi);
+        }
+
+        searchInput.addEventListener('input', () => { currentPage = 1; filterAndPaginate(); });
+        activeFilter.addEventListener('change', () => { currentPage = 1; filterAndPaginate(); });
+
+        filterAndPaginate();
+    </script>
+}
+
+<style>
+    .badge {
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .table th {
+        border-top: none;
+        background-color: var(--primary);
+        color: white !important;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa !important;
+    }
+
+    .btn-sm {
+        border-radius: 8px;
+    }
+</style>

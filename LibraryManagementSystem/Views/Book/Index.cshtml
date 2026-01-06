@@ -1,0 +1,306 @@
+﻿@using LibraryManagementSystem.Helper
+@using LibraryManagementSystem.Service
+@model IEnumerable<LibraryManagementSystem.Models.Book>
+@inject ISignInHelper SignInHelper
+@inject IRolePermissionService RolePermissionService
+
+@{
+    ViewData["Title"] = "Books Management";
+    ViewData["ActivePage"] = "Books";
+    var role = SignInHelper.Roles;
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-5">
+    <div>
+        <h3 class="mb-1 fw-bold text-primary">Books Management</h3>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a asp-controller="Dashboard" asp-action="Index">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Books</li>
+            </ol>
+        </nav>
+    </div>
+
+    @* ✅ Updated (no logic removed):
+       Your original was: if (User.IsInRole("Mangement"))
+       That role name looks like a typo.
+       Use the same permission logic you already use everywhere else.
+    *@
+    @if (RolePermissionService.CanEdit(role))
+    {
+        <a asp-action="CreateOrEdit" class="btn btn-primary shadow-sm btn-lg">
+            <i class="bi bi-plus-circle me-2"></i>Add New Book
+        </a>
+    }
+</div>
+
+<!-- Filters & Search -->
+<div class="dashboard-card p-4 mb-4">
+    <div class="row g-3 align-items-center">
+        <div class="col-md-5">
+            <div class="search-input-wrapper">
+                <i class="bi bi-search"></i>
+                <input type="text" id="searchInput" class="form-control" placeholder="Search by title, author or category..." />
+            </div>
+        </div>
+        <div class="col-md-4">
+            <select id="categoryFilter" class="form-select form-select-lg">
+                <option value="">All Categories</option>
+                @{
+                    var categories = Model.Select(b => b.Category).Distinct().OrderBy(c => c);
+                    foreach (var cat in categories)
+                    {
+                        <option value="@cat">@cat</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-md-3 text-md-end">
+            <small class="text-muted" id="resultsCount">
+                Showing <span id="visibleCount">@Model.Count()</span> of @Model.Count() books
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Books Table -->
+<div class="data-table">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle" id="booksTable">
+            <thead>
+                <tr>
+                    <th class="text-muted fw-semibold">SNo</th>
+                    <th class="text-muted fw-semibold">Title</th>
+                    <th class="text-muted fw-semibold">Author</th>
+                    <th class="text-muted fw-semibold">Category</th>
+                    <th class="text-muted fw-semibold text-center">Total Copies</th>
+                    <th class="text-muted fw-semibold text-center">Available</th>
+                    <th class="text-muted fw-semibold text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                @{
+                    int sno = 1;
+                    foreach (var item in Model)
+                    {
+                        var availabilityClass = item.AvailableCopies > 5 ? "bg-success" :
+                        item.AvailableCopies > 0 ? "bg-warning text-dark" : "bg-danger";
+                        var availabilityText = item.AvailableCopies > 5 ? "In Stock" :
+                        item.AvailableCopies > 0 ? "Low Stock" : "Out of Stock";
+
+                        <tr data-category="@item.Category">
+                            <td class="fw-medium index">@sno</td>
+                            <td class="title fw-semibold">@item.Title</td>
+                            <td class="author">@item.Author</td>
+                            <td class="category">@item.Category</td>
+                            <td class="text-center">@item.TotalCopies</td>
+                            <td class="text-center">
+                                <span class="badge @availabilityClass px-3 py-2 rounded-pill">
+                                    @item.AvailableCopies (@availabilityText)
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex justify-content-center gap-2">
+
+                                    @if (RolePermissionService.CanView(role))
+                                    {
+                                        <a asp-action="Details" asp-route-id="@item.Id"
+                                           class="btn btn-info btn-sm shadow-sm" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    }
+
+                                    @if (RolePermissionService.CanEdit(role))
+                                    {
+                                        <a asp-action="CreateOrEdit" asp-route-id="@item.Id"
+                                           class="btn btn-warning btn-sm shadow-sm" title="Edit">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </a>
+                                    }
+
+                                    @if (RolePermissionService.CanDelete(role))
+                                    {
+                                        <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
+                                              onsubmit="return confirm('Are you sure you want to delete this book?');">
+                                            <button type="submit" class="btn btn-danger btn-sm shadow-sm" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    }
+
+                                    @* ✅ Updated Apply button (no logic removed):
+                                       - Correct route param: bookId
+                                       - Correct icon: journal/check (not pencil)
+                                       - Disable apply when out of stock
+                                    *@
+                                    @if (User.IsInRole("Student"))
+                                    {
+                                        if (item.AvailableCopies > 0)
+                                        {
+                                            <a asp-controller="BookApplication"
+                                               asp-action="Applybook"
+                                               asp-route-bookId="@item.Id"
+                                               class="btn btn-success btn-sm shadow-sm"
+                                               title="Apply to Borrow">
+                                                <i class="bi bi-journal-arrow-up"></i>
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-secondary btn-sm shadow-sm"
+                                                    title="Out of Stock"
+                                                    disabled>
+                                                <i class="bi bi-journal-x"></i>
+                                            </button>
+                                        }
+                                    }
+
+                                </div>
+                            </td>
+                        </tr>
+
+                        sno++;
+                    }
+                }
+
+                @if (!Model.Any())
+                {
+                    <tr id="emptyRow">
+                        <td colspan="7" class="text-center py-5">
+                            <i class="bi bi-book fs-1 text-muted d-block mb-3"></i>
+                            <p class="text-muted fw-medium">No books found.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-between align-items-center p-4 border-top">
+        <small class="text-muted" id="pageInfo">Page 1 of 1</small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+        </nav>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const tableBody = document.getElementById('tableBody');
+        const rows = Array.from(tableBody.querySelectorAll('tr:not(#emptyRow)'));
+        const emptyRow = document.getElementById('emptyRow');
+        const searchInput = document.getElementById('searchInput');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const visibleCount = document.getElementById('visibleCount');
+        const pageInfo = document.getElementById('pageInfo');
+        const pagination = document.getElementById('pagination');
+
+        const itemsPerPage = 10;
+        let currentPage = 1;
+
+        function filterAndPaginate() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const selectedCategory = categoryFilter.value;
+
+            let filteredRows = rows.filter(row => {
+                const title = row.querySelector('.title')?.textContent.toLowerCase() || '';
+                const author = row.querySelector('.author')?.textContent.toLowerCase() || '';
+                const category = row.querySelector('.category')?.textContent || '';
+                const rowCategory = row.dataset.category;
+
+                const matchesSearch = title.includes(searchTerm) ||
+                                      author.includes(searchTerm) ||
+                                      category.includes(searchTerm);
+
+                const matchesCategory = selectedCategory === '' || rowCategory === selectedCategory;
+
+                return matchesSearch && matchesCategory;
+            });
+
+            visibleCount.textContent = filteredRows.length;
+
+            rows.forEach(r => r.style.display = 'none');
+            if (emptyRow) emptyRow.style.display = filteredRows.length === 0 ? '' : 'none';
+
+            const totalPages = Math.max(1, Math.ceil(filteredRows.length / itemsPerPage));
+            currentPage = Math.min(currentPage, totalPages);
+
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageRows = filteredRows.slice(start, end);
+
+            pageRows.forEach(row => row.style.display = '');
+
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+
+            pageRows.forEach((row, i) => {
+                row.querySelector('.index').textContent = start + i + 1;
+            });
+
+            pagination.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            // Previous
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = '<a class="page-link" href="#">Previous</a>';
+            if (currentPage > 1) prevLi.addEventListener('click', (e) => { e.preventDefault(); currentPage--; filterAndPaginate(); });
+            pagination.appendChild(prevLi);
+
+            // Page numbers (smart display)
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) {
+                    const li = document.createElement('li');
+                    li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                    li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                    if (i !== currentPage) li.addEventListener('click', (e) => { e.preventDefault(); currentPage = i; filterAndPaginate(); });
+                    pagination.appendChild(li);
+                } else if ((i === 2 && currentPage > 4) || (i === totalPages - 1 && currentPage < totalPages - 3)) {
+                    const dots = document.createElement('li');
+                    dots.className = 'page-item disabled';
+                    dots.innerHTML = '<a class="page-link">...</a>';
+                    pagination.appendChild(dots);
+                }
+            }
+
+            // Next
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = '<a class="page-link" href="#">Next</a>';
+            if (currentPage < totalPages) nextLi.addEventListener('click', (e) => { e.preventDefault(); currentPage++; filterAndPaginate(); });
+            pagination.appendChild(nextLi);
+        }
+
+        searchInput.addEventListener('input', () => { currentPage = 1; filterAndPaginate(); });
+        categoryFilter.addEventListener('change', () => { currentPage = 1; filterAndPaginate(); });
+
+        filterAndPaginate();
+    </script>
+}
+
+<style>
+    .badge {
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .table th {
+        border-top: none;
+        background-color: var(--primary);
+        color: white !important;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa !important;
+    }
+
+    .btn-sm {
+        border-radius: 8px;
+    }
+</style>
+
+@* old code kept as-is *@

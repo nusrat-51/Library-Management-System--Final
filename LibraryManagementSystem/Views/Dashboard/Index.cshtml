@@ -1,0 +1,361 @@
+﻿@using LibraryManagementSystem.Helper
+@using LibraryManagementSystem.Service
+@* Views/Dashboard/Index.cshtml *@
+
+@inject ISignInHelper SignInHelper
+@inject IRolePermissionService RolePermissionService
+
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewData["ActivePage"] = "Dashboard";
+    var role = SignInHelper.Roles;
+}
+
+@if (RolePermissionService.CanEdit(role))
+{
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <h3 class="mb-0 fw-bold text-primary">Dashboard Overview</h3>
+        <div class="d-flex gap-2">
+            <a asp-controller="Book" asp-action="CreateOrEdit" asp-route-id="0" class="btn btn-primary shadow-sm">
+                <i class="bi bi-plus-circle me-2"></i>Add New Book
+            </a>
+            <button class="btn btn-outline-secondary shadow-sm" onclick="window.print()">
+                <i class="bi bi-printer me-2"></i>Print
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-5">
+        <div class="col-xl-3 col-md-6">
+            <div class="dashboard-card h-100">
+                <div class="card-body p-4">
+                    <div class="card-icon bg-primary mb-3">
+                        <i class="bi bi-book"></i>
+                    </div>
+                    <h5 class="card-title text-muted fw-medium">Total Books</h5>
+                    <h2 class="mb-2 fw-bold text-primary">@ViewBag.TotalBooks</h2>
+
+                    <p class="text-success small mb-0">
+                        <i class="bi bi-arrow-up me-1"></i>5.2% increase from last month
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="dashboard-card h-100">
+                <div class="card-body p-4">
+                    <div class="card-icon" style="background: #27ae60;">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h5 class="card-title text-muted fw-medium">Active Members</h5>
+                    <h2 class="mb-2 fw-bold text-primary">@ViewBag.ActiveMembers</h2>
+                    <p class="text-success small mb-0">
+                        <i class="bi bi-arrow-up me-1"></i>8.7% increase from last month
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="dashboard-card h-100">
+                <div class="card-body p-4">
+                    <div class="card-icon" style="background: #f39c12;">
+                        <i class="bi bi-arrow-left-right"></i>
+                    </div>
+                    <h5 class="card-title text-muted fw-medium">Books on Loan</h5>
+                    <h2 class="mb-2 fw-bold text-primary">@ViewBag.BooksOnLoan</h2>
+                    <p class="text-danger small mb-0">
+                        <i class="bi bi-arrow-down me-1"></i>2.3% decrease from last week
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="dashboard-card h-100">
+                <div class="card-body p-4">
+                    <div class="card-icon bg-danger mb-3">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <h5 class="card-title text-muted fw-medium">Overdue Books</h5>
+                    <h2 class="mb-2 fw-bold text-primary">@ViewBag.OverdueBooks</h2>
+                    <p class="text-danger small mb-0">
+                        <i class="bi bi-exclamation-circle me-1"></i>Requires immediate attention
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Tables -->
+    <div class="row g-4 mb-5">
+        <div class="col-lg-6">
+            <div class="data-table">
+                <div class="d-flex justify-content-between align-items-center p-4 border-bottom">
+                    <h5 class="mb-0 fw-semibold">Recent Book Loans</h5>
+                    <a asp-controller="BookApplication"
+                       asp-action="Recent"
+                       asp-route-status="Approved"
+                       asp-route-includePending="true"
+                       class="text-decoration-none small">
+                        View All →
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th class="text-muted fw-medium">Book Title</th>
+                                <th class="text-muted fw-medium">Member</th>
+                                <th class="text-muted fw-medium">Due Date</th>
+                                <th class="text-muted fw-medium">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var loans = ViewBag.RecentLoans as IEnumerable<dynamic>;
+                                if (loans != null && loans.Any())
+                                {
+                                    foreach (var loan in loans)
+                                    {
+                                        var status = (string)loan.DisplayStatus;
+
+                                        string badgeClass = status switch
+                                        {
+                                            "On Time" => "bg-success",
+                                            "Due Soon" => "bg-warning text-dark",
+                                            "Overdue" => "bg-danger",
+                                            "Pending" => "bg-secondary",
+                                            "Rejected" => "bg-dark",
+                                            _ => "bg-secondary"
+                                        };
+
+                                        <tr>
+                                            <td>@loan.BookTitle</td>
+                                            <td>@loan.Member</td>
+                                            <td>@(((DateTime)loan.DueDate).ToString("dd MMM yyyy"))</td>
+                                            <td><span class="badge @badgeClass px-3 py-2">@(status)</span></td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">
+                                            No recent book loans found.
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="data-table">
+                <div class="d-flex justify-content-between align-items-center p-4 border-bottom">
+                    <h5 class="mb-0 fw-semibold">Recently Added Books</h5>
+                    <a asp-controller="Book" asp-action="Latest" class="text-decoration-none small">
+                        View All →
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th class="text-muted fw-medium">Title</th>
+                                <th class="text-muted fw-medium">Author</th>
+                                <th class="text-muted fw-medium">Category</th>
+                                <th class="text-muted fw-medium">Added Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var books = ViewBag.RecentBooks as IEnumerable<dynamic>;
+                                if (books != null && books.Any())
+                                {
+                                    foreach (var b in books)
+                                    {
+                                        <tr>
+                                            <td>@b.Title</td>
+                                            <td>@b.Author</td>
+                                            <td>@b.Category</td>
+                                            <td>@(((DateTime)b.CreatedAt).ToString("dd MMM yyyy"))</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">
+                                            No recently added books found.
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-4 fw-semibold">Quick Actions</h5>
+                    <div class="row g-3 text-center">
+                        <div class="col-lg-2 col-md-4 col-6">
+                            <a asp-controller="Book" asp-action="CreateOrEdit" asp-route-id="0" class="btn btn-outline-primary w-100 py-4 d-flex flex-column align-items-center shadow-sm hover-lift">
+                                <i class="bi bi-plus-circle mb-2" style="font-size: 28px;"></i>
+                                <span class="fw-medium">Add Book</span>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-6">
+                            <a asp-controller="Members" asp-action="Index" class="btn btn-outline-success w-100 py-4 d-flex flex-column align-items-center shadow-sm hover-lift">
+                                <i class="bi bi-person-plus mb-2" style="font-size: 28px;"></i>
+                                <span class="fw-medium">New Member</span>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-6">
+                            <a asp-controller="BookApplication" asp-action="Index" class="btn btn-outline-warning w-100 py-4 d-flex flex-column align-items-center shadow-sm hover-lift">
+                                <i class="bi bi-arrow-left-right mb-2" style="font-size: 28px;"></i>
+                                <span class="fw-medium">Issue Book</span>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-6">
+                            <a href="#" class="btn btn-outline-info w-100 py-4 d-flex flex-column align-items-center shadow-sm hover-lift">
+                                <i class="bi bi-clock-history mb-2" style="font-size: 28px;"></i>
+                                <span class="fw-medium">Check Overdue</span>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-6">
+                            <a asp-controller="Reports" asp-action="Index" class="btn btn-outline-secondary w-100 py-4 d-flex flex-column align-items-center shadow-sm hover-lift">
+                                <i class="bi bi-printer mb-2" style="font-size: 28px;"></i>
+                                <span class="fw-medium">Print Reports</span>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-6">
+                            <a asp-controller="Settings" asp-action="Index" class="btn btn-outline-dark w-100 py-4 d-flex flex-column align-items-center shadow-sm hover-lift">
+                                <i class="bi bi-gear mb-2" style="font-size: 28px;"></i>
+                                <span class="fw-medium">Settings</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @section Scripts {
+        <script>
+            document.querySelectorAll('.hover-lift').forEach(btn => {
+                btn.addEventListener('mouseenter', () => btn.style.transform = 'translateY(-4px)');
+                btn.addEventListener('mouseleave', () => btn.style.transform = 'translateY(0)');
+            });
+        </script>
+    }
+
+    <style>
+        .hover-lift {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+        }
+
+            .hover-lift:hover {
+                transform: translateY(-6px) !important;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+            }
+
+        .badge {
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+    </style>
+}
+
+@if (User.IsInRole("Student"))
+{
+    <!-- ✅ STUDENT DASHBOARD (Added, without deleting anything) -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1 fw-bold text-primary">Student Dashboard</h3>
+            <p class="text-muted mb-0">Browse books, request to borrow, and track your borrowed books.</p>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Total Books Borrowed</div>
+                        <div class="fs-3 fw-bold">@ViewBag.StudentTotalBorrowed</div>
+                    </div>
+                    <i class="bi bi-journal-bookmark fs-2 text-primary"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Currently Held</div>
+                        <div class="fs-3 fw-bold">@ViewBag.StudentCurrentlyHeld</div>
+                    </div>
+                    <i class="bi bi-book-half fs-2 text-success"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card shadow-sm border-0 h-100 border-start border-4 border-danger">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Overdue Books</div>
+                        <div class="fs-3 fw-bold text-danger">@ViewBag.StudentOverdue</div>
+                        <div class="small text-danger">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Action required
+                        </div>
+                    </div>
+                    <i class="bi bi-alarm fs-2 text-danger"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Pending Requests</div>
+                        <div class="fs-3 fw-bold">@ViewBag.StudentPending</div>
+                    </div>
+                    <i class="bi bi-hourglass-split fs-2 text-warning"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Student Actions -->
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <a asp-controller="Book" asp-action="Index" class="btn btn-outline-primary w-100 py-4 shadow-sm hover-lift">
+                <i class="bi bi-search me-2"></i>Browse Books
+            </a>
+        </div>
+        <div class="col-lg-6">
+            <a asp-controller="BookApplication" asp-action="Index" class="btn btn-outline-success w-100 py-4 shadow-sm hover-lift">
+                <i class="bi bi-clock-history me-2"></i>My Borrow Requests
+            </a>
+        </div>
+    </div>
+}

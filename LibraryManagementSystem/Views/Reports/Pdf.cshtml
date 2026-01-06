@@ -1,0 +1,109 @@
+﻿@{
+    Layout = null; // IMPORTANT: clean PDF page (no sidebar/footer)
+    ViewData["Title"] = "Monthly Report PDF";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Monthly Report</title>
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <style>
+        body { padding: 24px; }
+        .card { border: 1px solid #ddd; box-shadow: none !important; }
+        table { width: 100% !important; border-collapse: collapse !important; }
+        th, td { border: 1px solid #ddd !important; padding: 8px !important; }
+        thead { background: #f5f5f5 !important; }
+
+        /* Razor needs @@media */
+        @@media print {
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h3 class="fw-bold mb-1">Monthly Report</h3>
+            <div>
+                <strong>Month:</strong>
+                @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName((int)ViewBag.SelectedMonth)
+                @ViewBag.SelectedYear
+            </div>
+            <div><strong>Printed On:</strong> @DateTime.Now.ToString("dd MMM yyyy, hh:mm tt")</div>
+        </div>
+
+        <div class="no-print">
+            <button class="btn btn-primary" onclick="window.print()">Print / Save as PDF</button>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Books Issued This Month</div>
+                    <div class="fs-2 fw-bold">@ViewBag.TotalIssued</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="card border-start border-4 border-danger">
+                <div class="card-body">
+                    <div class="text-muted">Fine Due (Calculated)</div>
+                    <div class="fs-2 fw-bold text-danger">@ViewBag.TotalFineDue</div>
+                    <div class="small text-muted">Fine per day: @ViewBag.FinePerDay</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h5 class="fw-semibold mb-2">Issued Books Details</h5>
+
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Book</th>
+                <th>Student</th>
+                <th>Issued Date</th>
+                <th>Due Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                var list = ViewBag.MonthlyIssuedList as IEnumerable<dynamic>;
+                if (list != null && list.Any())
+                {
+                    foreach (var x in list)
+                    {
+                        <tr>
+                            <td>@x.BookTitle</td>
+                            <td>@x.StudentEmail</td>
+                            <td>@(((DateTime)x.CreatedAt).ToString("dd MMM yyyy"))</td>
+                            <td>@(((DateTime)x.ReturnDate).ToString("dd MMM yyyy"))</td>
+                            <td>@x.Status</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-3">No issued records found for this month.</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    <script>
+        // Auto-open print dialog (optional)
+        window.onload = function () {
+            window.print();
+        };
+    </script>
+</body>
+</html>

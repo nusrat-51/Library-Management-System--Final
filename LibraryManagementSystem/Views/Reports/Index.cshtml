@@ -1,0 +1,131 @@
+﻿@{
+    ViewData["Title"] = "Monthly Report";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Monthly Report</h3>
+        <p class="text-muted mb-0">Generate monthly issued books and fine report.</p>
+    </div>
+</div>
+
+<form method="get" asp-controller="Reports" asp-action="Index" class="row g-3 mb-4">
+    <!-- Month -->
+    <div class="col-md-3">
+        <label class="form-label">Month</label>
+        <select name="month" class="form-select">
+            @{
+                int selectedMonth = ViewBag.SelectedMonth != null ? (int)ViewBag.SelectedMonth : DateTime.Today.Month;
+            }
+
+            @for (int m = 1; m <= 12; m++)
+            {
+                if (m == selectedMonth)
+                {
+                    <option value="@m" selected="selected">
+                        @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)
+                    </option>
+                }
+                else
+                {
+                    <option value="@m">
+                        @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)
+                    </option>
+                }
+            }
+        </select>
+    </div>
+
+    <!-- Year -->
+    <div class="col-md-3">
+        <label class="form-label">Year</label>
+        <input type="number" name="year" class="form-control" value="@ViewBag.SelectedYear" />
+    </div>
+
+    <!-- Preview -->
+    <div class="col-md-3 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100">
+            Generate (Preview)
+        </button>
+    </div>
+
+    <!-- PDF -->
+    <div class="col-md-3 d-flex align-items-end">
+        <a class="btn btn-outline-secondary w-100"
+           target="_blank"
+           asp-controller="Reports"
+           asp-action="Pdf"
+           asp-route-month="@ViewBag.SelectedMonth"
+           asp-route-year="@ViewBag.SelectedYear">
+            <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF
+        </a>
+    </div>
+</form>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="text-muted">Books Issued This Month</div>
+                <div class="fs-2 fw-bold">@ViewBag.TotalIssued</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 border-start border-4 border-danger">
+            <div class="card-body">
+                <div class="text-muted">Fine Due (Calculated)</div>
+                <div class="fs-2 fw-bold text-danger">@ViewBag.TotalFineDue</div>
+                <div class="small text-muted">Fine per day: @ViewBag.FinePerDay</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-0 fw-semibold">
+        Issued Books Details
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Book</th>
+                        <th>Student</th>
+                        <th>Issued Date</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var list = ViewBag.MonthlyIssuedList as IEnumerable<dynamic>;
+                        if (list != null && list.Any())
+                        {
+                            foreach (var x in list)
+                            {
+                                <tr>
+                                    <td>@x.BookTitle</td>
+                                    <td>@x.StudentEmail</td>
+                                    <td>@(((DateTime)x.CreatedAt).ToString("dd MMM yyyy"))</td>
+                                    <td>@(((DateTime)x.ReturnDate).ToString("dd MMM yyyy"))</td>
+                                    <td><span class="badge bg-success">@x.Status</span></td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    No issued records found for this month.
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

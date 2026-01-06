@@ -1,0 +1,135 @@
+﻿@model LibraryManagementSystem.Models.BookApplication
+
+@{
+    ViewData["Title"] = "Book Application Details";
+    ViewData["ActivePage"] = "BookApplication";
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-5">
+    <div>
+        <h3 class="mb-1 fw-bold text-primary">Application Details</h3>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a asp-action="Index">Book Applications</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Details</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="CreateOrEdit" asp-route-id="@Model.Id" class="btn btn-primary shadow-sm">
+            <i class="bi bi-pencil-square me-2"></i>Edit Application
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary shadow-sm">
+            <i class="bi bi-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<!-- Details Card -->
+<div class="row justify-content-center">
+    <div class="col-lg-11 col-xxl-9">
+        <div class="dashboard-card overflow-hidden">
+            <div class="card-body p-5">
+                <!-- Status Header -->
+                <div class="d-flex justify-content-between align-items-start mb-5">
+                    <div>
+                        <h4 class="fw-bold mb-1" style="color: var(--primary);">
+                            Application #@Model.Id
+                        </h4>
+                        @if (Model.Book != null)
+                        {
+                            <p class="text-muted mb-0">for <strong>@Model.Book.Title</strong> by @Model.Book.Author</p>
+                        }
+                    </div>
+                    <div class="text-end">
+                        <span class="badge fs-5 px-4 py-3 rounded-pill
+                            @(Model.Status == "Pending" ? "bg-warning text-dark" :
+                                                            Model.Status == "Approved" ? "bg-success" :
+                                                            "bg-danger")">
+                            @Model.Status
+                        </span>
+                    </div>
+                </div>
+
+                <div class="row g-5">
+                    <!-- Left: Student & Book Info -->
+                    <div class="col-md-6">
+                        <h5 class="fw-semibold text-muted mb-4">Student Information</h5>
+                        <dl class="row g-3">
+                            <dt class="col-sm-4 fw-medium">Student Email</dt>
+                            <dd class="col-sm-8">
+                                <i class="bi bi-envelope me-2 text-secondary"></i>@Model.StudentEmail
+                            </dd>
+
+                            <dt class="col-sm-4 fw-medium">Student ID</dt>
+                            <dd class="col-sm-8">
+                                <i class="bi bi-person-badge me-2 text-secondary"></i>@Model.StudentId
+                            </dd>
+
+                            @if (Model.Book != null)
+                            {
+                                <dt class="col-sm-4 fw-medium">Book</dt>
+                                <dd class="col-sm-8">
+                                    <i class="bi bi-book me-2 text-secondary"></i>
+                                    <strong>@Model.Book.Title</strong>
+                                </dd>
+                            }
+                        </dl>
+                    </div>
+
+                    <!-- Right: Dates & Financial -->
+                    <div class="col-md-6">
+                        <h5 class="fw-semibold text-muted mb-4">Loan Details</h5>
+                        <dl class="row g-3">
+                            <dt class="col-sm-4 fw-medium">Issue Date</dt>
+                            <dd class="col-sm-8">
+                                <i class="bi bi-calendar-check me-2 text-success"></i>
+                                @(Model.IssueDate.ToString("dddd, MMMM dd, yyyy") ?? "Not set")
+                            </dd>
+
+                            <dt class="col-sm-4 fw-medium">Return Date</dt>
+                            <dd class="col-sm-8">
+                                <i class="bi bi-calendar-x me-2 text-danger"></i>
+                                @(Model.ReturnDate.ToString("dddd, MMMM dd, yyyy") ?? "Not set")
+                            </dd>
+
+                            <dt class="col-sm-4 fw-medium">Fine Amount</dt>
+                            <dd class="col-sm-8">
+                                <i class="bi bi-currency-dollar me-2 text-warning"></i>
+                                <span class="fw-bold fs-5">@Model.FineAmount.ToString("C")</span>
+                            </dd>
+
+                            <dt class="col-sm-4 fw-medium">Created At</dt>
+                            <dd class="col-sm-8">
+                                <i class="bi bi-clock-history me-2 text-muted"></i>
+                                @Model.CreatedAt.ToString("MMMM dd, yyyy HH:mm")
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .dashboard-card {
+        border-radius: 20px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+        transition: all 0.3s ease;
+    }
+
+        .dashboard-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+        }
+
+    dl dt {
+        color: var(--text-muted);
+    }
+
+    .badge {
+        font-weight: 600;
+    }
+</style>

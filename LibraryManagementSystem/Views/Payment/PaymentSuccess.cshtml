@@ -1,0 +1,19 @@
+﻿@model LibraryManagementSystem.Models.FinePayment
+
+@{
+    ViewData["Title"] = "Payment Successful";
+}
+
+<div class="container mt-4">
+    <div class="alert alert-success text-center p-4" style="border-radius:12px;">
+        <h2 class="mb-3">✅ Payment Successful</h2>
+
+        <p class="mb-1"><b>Transaction ID:</b> @Model.TranId</p>
+        <p class="mb-1"><b>Amount Paid:</b> ৳@Model.Amount.ToString("0.00")</p>
+        <p class="mb-4"><b>Status:</b> @Model.Status</p>
+
+        <a asp-controller="BookApplication" asp-action="Index" class="btn btn-primary">
+            Back to Applications
+        </a>
+    </div>
+</div>

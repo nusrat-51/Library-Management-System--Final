@@ -1,0 +1,173 @@
+﻿@{
+    ViewData["Title"] = "Settings";
+    ViewData["ActivePage"] = "Settings";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-1 fw-bold text-primary">Settings</h3>
+        <small class="text-muted">Manage password & notifications</small>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success shadow-sm">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger shadow-sm">@TempData["Error"]</div>
+}
+
+<div class="row g-4">
+
+    <!-- ✅ Change Password -->
+    <div class="col-lg-6">
+        <div class="dashboard-card p-4 h-100">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1">Change Password</h5>
+                    <p class="text-muted mb-0">Update your login password securely.</p>
+                </div>
+                <div class="icon-circle bg-primary-subtle text-primary">
+                    <i class="bi bi-shield-lock fs-4"></i>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <!-- ✅ If you already have change password page, keep it -->
+                <!-- Change this route if your project uses different action -->
+                <a asp-controller="Account" asp-action="ChangePassword"
+                   class="btn btn-primary btn-lg shadow-sm w-100">
+                    <i class="bi bi-key me-2"></i>Go to Change Password
+                </a>
+
+                <div class="mt-3 text-muted small">
+                    Tip: Use at least 8 characters with numbers and symbols.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ Notifications -->
+    <div class="col-lg-6">
+        <div class="dashboard-card p-4 h-100">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1">Notifications</h5>
+                    <p class="text-muted mb-0">Control reminders and alerts.</p>
+                </div>
+                <div class="icon-circle bg-warning-subtle text-warning">
+                    <i class="bi bi-bell fs-4"></i>
+                </div>
+            </div>
+
+            <!-- ✅ This form saves to localStorage (frontend) so it works immediately.
+               If you later want DB save, I can give you controller + table code. -->
+            <form id="notifyForm" class="mt-4" onsubmit="return saveNotifySettings();">
+
+                <div class="d-flex justify-content-between align-items-center py-2">
+                    <div>
+                        <div class="fw-semibold">Email Notifications</div>
+                        <div class="text-muted small">Receive important updates by email.</div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="emailNotify">
+                    </div>
+                </div>
+
+                <hr />
+
+                <div class="d-flex justify-content-between align-items-center py-2">
+                    <div>
+                        <div class="fw-semibold">Due Date Reminders</div>
+                        <div class="text-muted small">Reminder before return date.</div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="dueReminder">
+                    </div>
+                </div>
+
+                <hr />
+
+                <div class="d-flex justify-content-between align-items-center py-2">
+                    <div>
+                        <div class="fw-semibold">Overdue Alerts</div>
+                        <div class="text-muted small">Alert when books become overdue.</div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="overdueAlert">
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-success btn-lg shadow-sm w-100">
+                        <i class="bi bi-check2-circle me-2"></i>Save Notification Settings
+                    </button>
+                    <div id="notifySavedMsg" class="text-success small mt-2 d-none">
+                        ✅ Saved successfully.
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .dashboard-card {
+        border-radius: 18px !important;
+        background: #fff;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+        transition: all .25s ease;
+        border: 1px solid rgba(0,0,0,0.03);
+    }
+
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.08);
+        }
+
+    .icon-circle {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        // ✅ Load existing saved notification settings (works instantly without DB)
+        (function loadNotifySettings() {
+            const data = localStorage.getItem("lms_notify_settings");
+            if (!data) return;
+
+            try {
+                const s = JSON.parse(data);
+                document.getElementById("emailNotify").checked = !!s.emailNotify;
+                document.getElementById("dueReminder").checked = !!s.dueReminder;
+                document.getElementById("overdueAlert").checked = !!s.overdueAlert;
+            } catch { }
+        })();
+
+        // ✅ Save notification settings (frontend)
+        function saveNotifySettings() {
+            const s = {
+                emailNotify: document.getElementById("emailNotify").checked,
+                dueReminder: document.getElementById("dueReminder").checked,
+                overdueAlert: document.getElementById("overdueAlert").checked
+            };
+
+            localStorage.setItem("lms_notify_settings", JSON.stringify(s));
+
+            const msg = document.getElementById("notifySavedMsg");
+            msg.classList.remove("d-none");
+            setTimeout(() => msg.classList.add("d-none"), 2000);
+
+            return false; // prevent real submit
+        }
+    </script>
+}

@@ -1,0 +1,153 @@
+﻿@model LibraryManagementSystem.Models.BookCategory
+
+@{
+    var isEdit = Model.Id != 0;
+    ViewData["Title"] = isEdit ? "Edit Book Category" : "Create New Book Category";
+    ViewData["ActivePage"] = "BookCategory";
+}
+
+<div class="row">
+    <div class="col-lg-8 col-md-10 mx-auto">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h3 class="mb-1 fw-bold text-primary">@ViewData["Title"]</h3>
+                <p class="text-muted mb-0">
+                    @(isEdit ? "Update the details of an existing book category." : "Add a new category to organize your library books.")
+                </p>
+            </div>
+            <a asp-action="Index" class="btn btn-outline-secondary shadow-sm">
+                <i class="bi bi-arrow-left me-2"></i>Back to List
+            </a>
+        </div>
+
+        <!-- Form Card -->
+        <div class="card shadow-sm border-0" style="border-radius: 16px;">
+            <div class="card-body p-5">
+                <form asp-action="CreateOrEdit" method="post" class="needs-validation" novalidate>
+                    <input type="hidden" asp-for="Id" />
+
+                    <div class="row g-4">
+                        <!-- Category Name -->
+                        <div class="col-12">
+                            <label asp-for="CategoryName" class="form-label fw-semibold text-dark"></label>
+                            <input asp-for="CategoryName"
+                                   class="form-control form-control-lg"
+                                   placeholder="e.g., Fiction, Science, Biography, Children's"
+                                   required />
+                            <div class="invalid-feedback">
+                                Please enter a category name.
+                            </div>
+                            <span asp-validation-for="CategoryName" class="text-danger small mt-1"></span>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="col-12">
+                            <label asp-for="Description" class="form-label fw-semibold text-dark">
+                                Description <span class="text-muted fw-normal">(Optional)</span>
+                            </label>
+                            <textarea asp-for="Description"
+                                      class="form-control"
+                                      rows="4"
+                                      placeholder="Provide a brief description of this category..."></textarea>
+                            <span asp-validation-for="Description" class="text-danger small mt-1"></span>
+                        </div>
+
+                        <!-- Is Active Checkbox -->
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input asp-for="IsActive"
+                                       class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="isActiveSwitch" />
+                                <label asp-for="IsActive" class="form-check-label fw-medium">
+                                    @(Model.IsActive ? "This category is currently active" : "Mark as active to show in listings")
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <hr class="my-5">
+
+                    <div class="d-flex justify-content-end gap-3">
+                        <a asp-action="Index" class="btn btn-outline-secondary px-4 shadow-sm">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary px-5 shadow-sm">
+                            <i class="bi bi-check-circle me-2"></i>
+                            @(isEdit ? "Update Category" : "Create Category")
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Enhanced client-side validation feedback
+        (function () {
+            'use strict'
+
+            var forms = document.querySelectorAll('.needs-validation')
+
+            Array.prototype.slice.call(forms).forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+
+                    form.classList.add('was-validated')
+                }, false)
+            })
+        })()
+
+        // Update checkbox label dynamically
+        document.getElementById('isActiveSwitch').addEventListener('change', function () {
+            const label = this.parentElement.querySelector('.form-check-label');
+            if (this.checked) {
+                label.textContent = "This category is currently active";
+            } else {
+                label.textContent = "Mark as active to show in listings";
+            }
+        });
+    </script>
+}
+
+<style>
+    /* Custom styling to match dashboard */
+    .form-control:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.15);
+    }
+
+    .form-check-input:checked {
+        background-color: #3498db;
+        border-color: #3498db;
+    }
+
+    .form-check-input:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.15);
+    }
+
+    .form-switch .form-check-input {
+        width: 3.5em;
+        height: 1.8em;
+    }
+
+    .card {
+        background: white;
+        transition: transform 0.3s ease;
+    }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+</style>

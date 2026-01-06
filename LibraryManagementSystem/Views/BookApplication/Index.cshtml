@@ -1,0 +1,425 @@
+﻿@using LibraryManagementSystem.Helper
+@using LibraryManagementSystem.Service
+@model IEnumerable<LibraryManagementSystem.Models.BookApplication>
+@inject ISignInHelper SignInHelper
+@inject IRolePermissionService RolePermissionService
+
+@{
+    ViewData["Title"] = "Book Applications";
+    ViewData["ActivePage"] = "BookApplication";
+    var role = SignInHelper.Roles;
+
+    // ✅ Admin-side (Manager/Admin/Librarian)
+    bool isAdminSide = RolePermissionService.CanEdit(role) || RolePermissionService.CanDelete(role);
+
+    // ✅ Student-side (based on your permission service)
+    bool isStudentSide = !isAdminSide;
+
+    // ✅ SUPER SAFE: Real role check
+    bool isStudentRole = User.IsInRole("Student");
+    bool isStaffRole = User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Librarian");
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="mb-1 fw-bold text-primary">Book Applications</h3>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a asp-controller="Dashboard" asp-action="Index">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Book Applications</li>
+            </ol>
+        </nav>
+    </div>
+
+    <a asp-action="CreateOrEdit" class="btn btn-success shadow-sm btn-lg">
+        <i class="bi bi-plus-circle me-2"></i>New Application
+    </a>
+</div>
+
+<!-- ✅ IMPORTANT: Show server messages (PayFine pending/no fine/etc.) -->
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger shadow-sm mt-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        @TempData["Error"]
+    </div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success shadow-sm mt-3" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        @TempData["Success"]
+    </div>
+}
+
+<!-- Filters & Search -->
+<div class="dashboard-card p-4 mb-4">
+    <div class="row g-3 align-items-center">
+        <div class="col-md-5">
+            <div class="search-input-wrapper">
+                <i class="bi bi-search"></i>
+                <input type="text" id="searchInput" class="form-control" placeholder="Search by student email, ID or book title..." />
+            </div>
+        </div>
+        <div class="col-md-4">
+            <select id="statusFilter" class="form-select form-select-lg">
+                <option value="">All Status</option>
+                <option value="Pending">Pending</option>
+                <option value="Approved">Approved</option>
+                <option value="Rejected">Rejected</option>
+            </select>
+        </div>
+        <div class="col-md-3 text-md-end">
+            <small class="text-muted" id="resultsCount">
+                Showing <span id="visibleCount">@Model.Count()</span> of @Model.Count() applications
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Applications Table -->
+<div class="data-table">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle" id="applicationsTable">
+            <thead>
+                <tr>
+                    <th class="text-muted fw-semibold">#</th>
+                    <th class="text-muted fw-semibold">Student Email</th>
+                    <th class="text-muted fw-semibold">Student Card No</th>
+                    <th class="text-muted fw-semibold">Book Title</th>
+                    <th class="text-muted fw-semibold">Status</th>
+                    <th class="text-muted fw-semibold">Fine Amount</th>
+                    <th class="text-muted fw-semibold">Issue Date</th>
+                    <th class="text-muted fw-semibold">Return Date</th>
+                    <th class="text-muted fw-semibold text-center">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody id="tableBody">
+                @{
+                    int index = 1;
+
+                    foreach (var item in Model)
+                    {
+                        var statusLower = (item.Status ?? "").ToLower();
+
+                        // ✅ compute fine if overdue (even when DB fine is 0)
+                        decimal finePerDay = 10m;
+                        int overdueDays = 0;
+
+                        if ((item.Status ?? "") == "Approved"
+                        && item.ReturnDate != default(DateTime)
+                        && DateTime.Today > item.ReturnDate.Date)
+                        {
+                            overdueDays = (DateTime.Today.Date - item.ReturnDate.Date).Days;
+                        }
+
+                        decimal computedFine =
+                        item.FineAmount > 0
+                        ? item.FineAmount
+                        : (overdueDays > 0 ? overdueDays * finePerDay : 0);
+
+                        <tr data-status="@statusLower">
+                            <td class="fw-medium index">@index</td>
+                            <td class="email">@item.StudentEmail</td>
+                            <td class="StudentIdCardNo">@item.StudentIdCardNo</td>
+
+                            <td class="bookTitle fw-semibold">
+                                @if (item.Book != null && !string.IsNullOrWhiteSpace(item.Book.Title))
+                                {
+                                    @item.Book.Title
+                                }
+                                else
+                                {
+                                    <em class="text-muted">Unknown Book</em>
+                                }
+                            </td>
+
+                            <td>
+                                @switch (item.Status)
+                                {
+                                    case "Pending":
+                                        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">Pending</span>
+                                        break;
+                                    case "Approved":
+                                        <span class="badge bg-success px-3 py-2 rounded-pill">Approved</span>
+                                        break;
+                                    case "Rejected":
+                                        <span class="badge bg-danger px-3 py-2 rounded-pill">Rejected</span>
+                                        break;
+                                    default:
+                                        <span class="badge bg-secondary px-3 py-2 rounded-pill">@item.Status</span>
+                                        break;
+                                }
+                            </td>
+
+                            <td class="fw-semibold">@computedFine.ToString("C")</td>
+
+                            <td>
+                                @{
+                                    if (item.IssueDate != default(DateTime))
+                                    {
+                                        @item.IssueDate.ToString("MMM dd, yyyy")
+                                    }
+                                    else
+                                    {
+                                        <text>-</text>
+                                    }
+                                }
+                            </td>
+
+                            <td>
+                                @{
+                                    if (item.ReturnDate != default(DateTime))
+                                    {
+                                        @item.ReturnDate.ToString("MMM dd, yyyy")
+                                    }
+                                    else
+                                    {
+                                        <text>-</text>
+                                    }
+                                }
+                            </td>
+
+                            <td>
+                                <div class="d-flex justify-content-center gap-2">
+
+                                    @if (RolePermissionService.CanView(role))
+                                    {
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm shadow-sm" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    }
+
+                                    @if (RolePermissionService.CanEdit(role))
+                                    {
+                                        <a asp-action="CreateOrEdit" asp-route-id="@item.Id" class="btn btn-warning btn-sm shadow-sm" title="Edit">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </a>
+                                    }
+
+                                    @if (RolePermissionService.CanDelete(role))
+                                    {
+                                        <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
+                                              onsubmit="return confirm('Are you sure you want to delete this application?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-danger btn-sm shadow-sm" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    }
+
+                                    <!-- ✅ STUDENT ONLY: Pay Fine always ACTIVE -->
+                                    @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Student"))
+                                    {
+                                        <form asp-controller="Payment"
+                                              asp-action="PayFine"
+                                              method="post"
+                                              class="d-inline"
+                                              onsubmit="return confirm('Proceed to online payment now?');">
+
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="bookApplicationId" value="@item.Id" />
+
+                                            <button type="submit"
+                                                    class="btn btn-danger btn-sm shadow-sm"
+                                                    title="Pay Fine (Online)">
+                                                <i class="bi bi-cash-coin"></i>
+                                                Pay Fine
+                                            </button>
+                                        </form>
+                                    }
+
+                                    <!-- ✅ STAFF ONLY: Pay Cash (kept your original condition) -->
+                                    @if (isStaffRole
+                                                                && computedFine > 0
+                                                                && (item.Status ?? "") == "Approved"
+                                                                && item.ReturnDate != default(DateTime)
+                                                                && item.ReturnDate.Date < DateTime.Today)
+                                    {
+                                        <form asp-controller="Payment"
+                                              asp-action="PayCash"
+                                              method="post"
+                                              class="d-inline"
+                                              onsubmit="return confirm('Payment confirmed.\nCash received successfully.\n\nGenerate receipt now?');">
+
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="bookApplicationId" value="@item.Id" />
+
+                                            <button type="submit"
+                                                    class="btn btn-dark btn-sm shadow-sm"
+                                                    title="Pay Cash">
+                                                <i class="bi bi-receipt"></i>
+                                                Pay Cash
+                                            </button>
+                                        </form>
+                                    }
+
+                                </div>
+                            </td>
+                        </tr>
+
+                        index++;
+                    }
+                }
+
+                @if (!Model.Any())
+                {
+                    <tr id="emptyRow">
+                        <td colspan="9" class="text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
+                            <p class="text-muted fw-medium">No book applications found.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-between align-items-center p-4 border-top">
+        <small class="text-muted" id="pageInfo">Page 1 of 1</small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+        </nav>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const tableBody = document.getElementById('tableBody');
+        const rows = Array.from(tableBody.querySelectorAll('tr:not(#emptyRow)'));
+        const emptyRow = document.getElementById('emptyRow');
+        const searchInput = document.getElementById('searchInput');
+        const statusFilter = document.getElementById('statusFilter');
+        const visibleCount = document.getElementById('visibleCount');
+        const pageInfo = document.getElementById('pageInfo');
+        const pagination = document.getElementById('pagination');
+
+        const itemsPerPage = 10;
+        let currentPage = 1;
+
+        function filterAndPaginate() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const selectedStatus = statusFilter.value.toLowerCase();
+
+            let filteredRows = rows.filter(row => {
+                const email = row.querySelector('.email')?.textContent.toLowerCase() || '';
+                const studentCardNo = row.querySelector('.StudentIdCardNo')?.textContent.toLowerCase() || '';
+                const bookTitle = row.querySelector('.bookTitle')?.textContent.toLowerCase() || '';
+                const status = row.dataset.status || '';
+
+                const matchesSearch = email.includes(searchTerm) ||
+                    studentCardNo.includes(searchTerm) ||
+                    bookTitle.includes(searchTerm);
+
+                const matchesStatus = selectedStatus === '' || status === selectedStatus;
+
+                return matchesSearch && matchesStatus;
+            });
+
+            visibleCount.textContent = filteredRows.length;
+
+            rows.forEach(r => r.style.display = 'none');
+            if (emptyRow) emptyRow.style.display = filteredRows.length === 0 ? '' : 'none';
+
+            const totalPages = Math.max(1, Math.ceil(filteredRows.length / itemsPerPage));
+            currentPage = Math.min(currentPage, totalPages);
+
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageRows = filteredRows.slice(start, end);
+
+            pageRows.forEach(row => row.style.display = '');
+
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+
+            pageRows.forEach((row, i) => {
+                row.querySelector('.index').textContent = start + i + 1;
+            });
+
+            pagination.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = '<a class="page-link" href="#">Previous</a>';
+            if (currentPage > 1) {
+                prevLi.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentPage--;
+                    filterAndPaginate();
+                });
+            }
+            pagination.appendChild(prevLi);
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) {
+                    const li = document.createElement('li');
+                    li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                    li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                    if (i !== currentPage) {
+                        li.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            currentPage = i;
+                            filterAndPaginate();
+                        });
+                    }
+                    pagination.appendChild(li);
+                } else if (i === 2 || i === totalPages - 1) {
+                    const dots = document.createElement('li');
+                    dots.className = 'page-item disabled';
+                    dots.innerHTML = '<span class="page-link">...</span>';
+                    pagination.appendChild(dots);
+                }
+            }
+
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = '<a class="page-link" href="#">Next</a>';
+            if (currentPage < totalPages) {
+                nextLi.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentPage++;
+                    filterAndPaginate();
+                });
+            }
+            pagination.appendChild(nextLi);
+        }
+
+        searchInput.addEventListener('input', () => {
+            currentPage = 1;
+            filterAndPaginate();
+        });
+
+        statusFilter.addEventListener('change', () => {
+            currentPage = 1;
+            filterAndPaginate();
+        });
+
+        filterAndPaginate();
+    </script>
+}
+
+<style>
+    .badge {
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .table th {
+        border-top: none;
+        background-color: var(--primary);
+        color: white !important;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa !important;
+    }
+
+    .btn-sm {
+        border-radius: 8px;
+    }
+</style>
