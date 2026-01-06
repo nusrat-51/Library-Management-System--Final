@@ -20,11 +20,8 @@ namespace LibraryManagementSystem.Controllers
             _config = config;
         }
 
-        // ✅ ONLINE PAYMENT: ONLY AUTHENTICATED STUDENTS
-        // ✅ Pay Fine button is ALWAYS ACTIVE in UI, so this action must handle all cases gracefully.
-        [Authorize(Roles = "Student")]
+        // STEP A: create FinePayment record per application
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> PayFine(int bookApplicationId, CancellationToken cancellationToken)
         {
             var app = await _context.bookApplications
@@ -32,26 +29,8 @@ namespace LibraryManagementSystem.Controllers
 
             if (app == null) return NotFound();
 
-            // ✅ Case 1: Not issued yet (Pending/Rejected)
-            // Keep system safe: show message and return to list.
-            if ((app.Status ?? "") != "Approved")
-            {
-                TempData["Error"] = "This application is not issued yet. You can pay fine only after approval (issued).";
-                return RedirectToAction("Index", "BookApplication");
-            }
-
-            // ✅ If already paid, block duplicate and show result page
-            var alreadyPaid = await _context.FinePayments
-                .FirstOrDefaultAsync(p => p.BookApplicationId == bookApplicationId && p.Status == "Paid", cancellationToken);
-
-            if (alreadyPaid != null)
-            {
-                TempData["Success"] = "Fine already paid for this record.";
-                return RedirectToAction("Result", new { tran_id = alreadyPaid.TranId });
-            }
-
             // ✅ Always calculate fine from ReturnDate (DB FineAmount may be 0 because you calculate only in UI)
-            decimal finePerDay = 10m;
+            decimal finePerDay = 10;
 
             var today = DateTime.Today;
             var dueDate = app.ReturnDate.Date;
@@ -66,21 +45,19 @@ namespace LibraryManagementSystem.Controllers
 
             decimal amount = app.FineAmount > 0 ? app.FineAmount : calculatedAmount;
 
-            // ✅ Case 2: Approved but no fine due
             if (amount <= 0)
             {
-                TempData["Error"] = "No fine is due for this book yet.";
+                TempData["Error"] = "No fine due for this record.";
                 return RedirectToAction("Index", "BookApplication");
             }
 
-            // ✅ If already has unpaid payment, reuse it (your logic kept)
+            // If already has unpaid payment, reuse it (your logic kept)
             var existing = await _context.FinePayments
                 .FirstOrDefaultAsync(p => p.BookApplicationId == bookApplicationId && p.Status == "Initiated", cancellationToken);
 
             if (existing != null)
                 return RedirectToAction("StartGateway", new { tranId = existing.TranId });
 
-            // ✅ Create initiated record
             var tranId = Guid.NewGuid().ToString("N");
 
             var payment = new FinePayment
@@ -106,7 +83,6 @@ namespace LibraryManagementSystem.Controllers
         // (UI already hides PayCash for students)
         [Authorize]
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> PayCash(int bookApplicationId, CancellationToken cancellationToken)
         {
             var app = await _context.bookApplications
@@ -114,14 +90,7 @@ namespace LibraryManagementSystem.Controllers
 
             if (app == null) return NotFound();
 
-            // ✅ enforce issued-only rule for cash too (keeps logic consistent)
-            if ((app.Status ?? "") != "Approved")
-            {
-                TempData["Error"] = "Cash payment is available only for issued (Approved) books.";
-                return RedirectToAction("Index", "BookApplication");
-            }
-
-            decimal finePerDay = 10m;
+            decimal finePerDay = 10;
             var today = DateTime.Today;
             var dueDate = app.ReturnDate.Date;
 
@@ -187,17 +156,12 @@ namespace LibraryManagementSystem.Controllers
             return View("CashReceipt", payment);
         }
 
-        // ✅ STEP B: Create session and redirect user to SSLCOMMERZ Hosted Page
-        [Authorize(Roles = "Student")]
+        // STEP B: Create session and redirect user to SSLCOMMERZ Hosted Page
         [HttpGet]
         public async Task<IActionResult> StartGateway(string tranId, CancellationToken cancellationToken)
         {
             var payment = await _context.FinePayments.FirstOrDefaultAsync(p => p.TranId == tranId, cancellationToken);
             if (payment == null) return NotFound();
-
-            // ✅ extra safety: don't allow gateway start if already paid
-            if (payment.Status == "Paid")
-                return RedirectToAction("Result", new { tran_id = payment.TranId });
 
             var storeId = _config["SSLCOMMERZ:StoreId"];
             var storePass = _config["SSLCOMMERZ:StorePassword"];
