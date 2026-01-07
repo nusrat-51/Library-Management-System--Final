@@ -20,8 +20,12 @@ namespace LibraryManagementSystem.Controllers
             _config = config;
         }
 
+        // -------------------------------
         // STEP A: create FinePayment record per application
+        // -------------------------------
+        [Authorize]
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> PayFine(int bookApplicationId, CancellationToken cancellationToken)
         {
             var app = await _context.bookApplications
@@ -51,6 +55,13 @@ namespace LibraryManagementSystem.Controllers
                 return RedirectToAction("Index", "BookApplication");
             }
 
+            // ✅ If already paid, go to receipt/result
+            var alreadyPaid = await _context.FinePayments
+                .FirstOrDefaultAsync(p => p.BookApplicationId == bookApplicationId && p.Status == "Paid", cancellationToken);
+
+            if (alreadyPaid != null)
+                return RedirectToAction("Result", new { tran_id = alreadyPaid.TranId });
+
             // If already has unpaid payment, reuse it (your logic kept)
             var existing = await _context.FinePayments
                 .FirstOrDefaultAsync(p => p.BookApplicationId == bookApplicationId && p.Status == "Initiated", cancellationToken);
@@ -78,11 +89,12 @@ namespace LibraryManagementSystem.Controllers
             return RedirectToAction("StartGateway", new { tranId });
         }
 
+        // -------------------------------
         // ✅ CASH PAYMENT (Manager/Admin/Librarian side)
-        // IMPORTANT FIX: Use [Authorize] only, because your Manager is getting AccessDenied with Roles filter.
-        // (UI already hides PayCash for students)
+        // -------------------------------
         [Authorize]
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> PayCash(int bookApplicationId, CancellationToken cancellationToken)
         {
             var app = await _context.bookApplications
@@ -143,7 +155,9 @@ namespace LibraryManagementSystem.Controllers
             return RedirectToAction("Receipt", new { tran_id = tranId });
         }
 
+        // -------------------------------
         // ✅ Cash receipt page
+        // -------------------------------
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> Receipt(string tran_id, CancellationToken cancellationToken)
@@ -156,12 +170,18 @@ namespace LibraryManagementSystem.Controllers
             return View("CashReceipt", payment);
         }
 
+        // -------------------------------
         // STEP B: Create session and redirect user to SSLCOMMERZ Hosted Page
+        // -------------------------------
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> StartGateway(string tranId, CancellationToken cancellationToken)
         {
             var payment = await _context.FinePayments.FirstOrDefaultAsync(p => p.TranId == tranId, cancellationToken);
             if (payment == null) return NotFound();
+
+            if (payment.Status == "Paid")
+                return RedirectToAction("Result", new { tran_id = payment.TranId });
 
             var storeId = _config["SSLCOMMERZ:StoreId"];
             var storePass = _config["SSLCOMMERZ:StorePassword"];
@@ -171,9 +191,11 @@ namespace LibraryManagementSystem.Controllers
             // ✅ This MUST be public URL (ngrok) so SSLCommerz can redirect back
             var publicBaseUrl = _config["SSLCOMMERZ:PublicBaseUrl"];
             if (string.IsNullOrWhiteSpace(publicBaseUrl))
-                return Content("PublicBaseUrl missing in appsettings.json");
+                return Content("PublicBaseUrl missing in appsettings.json (SSLCOMMERZ:PublicBaseUrl)");
 
+            // cleanup (important)
             publicBaseUrl = publicBaseUrl.Split("->")[0].Trim();
+            publicBaseUrl = publicBaseUrl.TrimEnd('/');
 
             var successUrl = $"{publicBaseUrl}/Payment/Success";
             var failUrl = $"{publicBaseUrl}/Payment/Fail";
@@ -210,10 +232,18 @@ namespace LibraryManagementSystem.Controllers
                 return Content("Session URL invalid. Check SSLCOMMERZ:SandboxSessionUrl in appsettings.json");
 
             var client = _httpClientFactory.CreateClient();
+
             var response = await client.PostAsync(sessionUrl, new FormUrlEncodedContent(postData), cancellationToken);
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
 
+            // ✅ IMPORTANT: show SSLCommerz errors clearly
+            if (!response.IsSuccessStatusCode)
+            {
+                return Content($"SSLCOMMERZ HTTP ERROR: {(int)response.StatusCode}\n\n{json}");
+            }
+
             using var doc = JsonDocument.Parse(json);
+
             if (!doc.RootElement.TryGetProperty("GatewayPageURL", out var gatewayUrlEl))
                 return Content("SSLCOMMERZ session failed: " + json);
 
@@ -224,6 +254,9 @@ namespace LibraryManagementSystem.Controllers
             return Redirect(gatewayUrl);
         }
 
+        // -------------------------------
+        // CALLBACKS (must be public - ngrok)
+        // -------------------------------
         [HttpPost, HttpGet]
         public async Task<IActionResult> Success(string tran_id, string val_id, CancellationToken cancellationToken)
         {
@@ -252,7 +285,7 @@ namespace LibraryManagementSystem.Controllers
             await _context.SaveChangesAsync(cancellationToken);
 
             var localBaseUrl = _config["SSLCOMMERZ:LocalBaseUrl"] ?? "http://localhost:5086";
-            localBaseUrl = localBaseUrl.Split("->")[0].Trim();
+            localBaseUrl = localBaseUrl.Split("->")[0].Trim().TrimEnd('/');
 
             return Redirect($"{localBaseUrl}/Payment/Result?tran_id={tran_id}");
         }
@@ -268,7 +301,7 @@ namespace LibraryManagementSystem.Controllers
             }
 
             var localBaseUrl = _config["SSLCOMMERZ:LocalBaseUrl"] ?? "http://localhost:5086";
-            localBaseUrl = localBaseUrl.Split("->")[0].Trim();
+            localBaseUrl = localBaseUrl.Split("->")[0].Trim().TrimEnd('/');
 
             return Redirect($"{localBaseUrl}/Payment/Result?tran_id={tran_id}");
         }
@@ -284,11 +317,15 @@ namespace LibraryManagementSystem.Controllers
             }
 
             var localBaseUrl = _config["SSLCOMMERZ:LocalBaseUrl"] ?? "http://localhost:5086";
-            localBaseUrl = localBaseUrl.Split("->")[0].Trim();
+            localBaseUrl = localBaseUrl.Split("->")[0].Trim().TrimEnd('/');
 
             return Redirect($"{localBaseUrl}/Payment/Result?tran_id={tran_id}");
         }
 
+        // -------------------------------
+        // RESULT PAGE
+        // -------------------------------
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> Result(string tran_id, CancellationToken cancellationToken)
         {

@@ -1,10 +1,15 @@
 ﻿@model IEnumerable<LibraryManagementSystem.Models.PremiumMembership>
 
 @{
-    ViewData["Title"] = "Premium Memberships";
+    ViewData["Title"] = "Premium Membership";
+    ViewData["ActivePage"] = "Membership";
 }
 
-<h3 class="fw-bold text-primary mb-4">Premium Memberships</h3>
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <h3 class="fw-bold text-primary mb-0">
+        <i class="bi bi-upc-scan me-2"></i> Premium Membership
+    </h3>
+</div>
 
 @if (TempData["Success"] != null)
 {
@@ -15,69 +20,111 @@
     <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
-<div class="table-responsive">
-    <table class="table table-striped align-middle">
-        <thead class="table-dark">
-            <tr>
-                <th>#</th>
-                <th>StudentId</th>
-                <th>Email</th>
-                <th>Purchased</th>
-                <th>Created</th>
-                <th>Purchased At</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @{
-                int i = 1;
-                foreach (var m in Model)
+<!-- ✅ Issue Barcode Form -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light fw-semibold">
+        Issue / Register Membership (৳100 Cash)
+    </div>
+    <div class="card-body">
+        <form asp-action="Issue" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Student ID (optional)</label>
+                    <input type="number" name="studentId" class="form-control" placeholder="e.g. 1" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Student Name</label>
+                    <input type="text" name="studentName" class="form-control" placeholder="Student Full Name" />
+                </div>
+
+                <div class="col-md-5">
+                    <label class="form-label">Student Email <span class="text-danger">*</span></label>
+                    <input type="email" name="studentEmail" class="form-control" placeholder="student@email.com" required />
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i> Issue Barcode
+                </button>
+
+                <small class="text-muted align-self-center">
+                    After issuing barcode, click “Mark Paid” when cash (৳100) received.
+                </small>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ✅ Membership List -->
+<div class="card shadow-sm">
+    <div class="card-header bg-light fw-semibold">
+        Membership List
+    </div>
+
+    <div class="card-body table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Purchased?</th>
+                    <th>Created</th>
+                    <th>Purchased At</th>
+                    <th style="width:180px;">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var m in Model)
                 {
                     <tr>
-                        <td>@i</td>
-                        <td>@m.StudentId</td>
+                        <td>@m.StudentName</td>
                         <td>@m.StudentEmail</td>
                         <td>
                             @if (m.IsPurchased)
                             {
-                                <span class="badge bg-success">Purchased</span>
+                                <span class="badge bg-success">Paid</span>
                             }
                             else
                             {
-                                <span class="badge bg-warning text-dark">Not Purchased</span>
+                                <span class="badge bg-warning text-dark">Not Paid</span>
                             }
                         </td>
-                        <td>@m.CreatedAt.ToString("MMM dd, yyyy")</td>
-                        <td>@(m.PurchasedAt.HasValue? m.PurchasedAt.Value.ToString("MMM dd, yyyy") : "-")</td>
-                        <td class="d-flex gap-2">
-
-                            <!-- Issue Barcode -->
-                            <form asp-action="Issue" method="post" class="d-inline">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="studentId" value="@m.StudentId" />
-                                <input type="hidden" name="studentEmail" value="@m.StudentEmail" />
-                                <button type="submit" class="btn btn-sm btn-primary">
-                                    Issue Barcode
-                                </button>
-                            </form>
-
-                            <!-- Mark Purchased -->
+                        <td>@m.CreatedAt.ToString("dd-MMM-yyyy")</td>
+                        <td>@(m.PurchasedAt.HasValue? m.PurchasedAt.Value.ToString("dd-MMM-yyyy") : "-")</td>
+                        <td>
                             @if (!m.IsPurchased)
                             {
                                 <form asp-action="MarkPurchased" method="post" class="d-inline">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@m.Id" />
-                                    <button type="submit" class="btn btn-sm btn-success">
-                                        Mark Purchased
+                                    <button type="submit" class="btn btn-success btn-sm"
+                                            onclick="return confirm('Mark this membership as PAID (৳100 received)?');">
+                                        <i class="bi bi-check2-circle me-1"></i> Mark Paid
                                     </button>
                                 </form>
                             }
+                            else
+                            {
+                                <span class="text-muted small">Already Paid</span>
+                            }
                         </td>
                     </tr>
-
-                    i++;
                 }
-            }
-        </tbody>
-    </table>
+
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            No premium memberships found.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>

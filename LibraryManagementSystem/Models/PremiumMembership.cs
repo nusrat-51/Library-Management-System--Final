@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
 
 namespace LibraryManagementSystem.Models
 {
@@ -6,23 +6,14 @@ namespace LibraryManagementSystem.Models
     {
         public int Id { get; set; }
 
-        // Your Identity user id is long
-        public long StudentId { get; set; }
-
-        [Required]
+        public long StudentId { get; set; }              // optional but useful if you have it
+        public string StudentName { get; set; } = "";
         public string StudentEmail { get; set; } = "";
 
-        // Store hashed barcode, not raw (security)
-        [Required]
         public string BarcodeHash { get; set; } = "";
 
-        public bool IsPurchased { get; set; } = false;
-
-        public DateTime? PurchasedAt { get; set; }
-
-        // Optional (you can ignore now)
-        public DateTime? ExpiresAt { get; set; }
-
+        public bool IsPurchased { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime? PurchasedAt { get; set; }
     }
 }

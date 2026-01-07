@@ -30,7 +30,7 @@ public class ApplicationDbContext : IdentityDbContext<
 
     // ✅ Fine payment table
     public DbSet<FinePayment> FinePayments { get; set; }
-    public DbSet<PremiumMembership> PremiumMemberships { get; set; }
+    public DbSet<LibraryManagementSystem.Models.PremiumMembership> PremiumMemberships { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -88,8 +88,8 @@
                         decimal finePerDay = 10m;
                         int overdueDays = 0;
 
-                        if ((item.Status ?? "") == "Approved"
-                        && item.ReturnDate != default(DateTime)
+                        // ✅ FIX: overdue fine should calculate for ANY status if return date passed
+                        if (item.ReturnDate != default(DateTime)
                         && DateTime.Today > item.ReturnDate.Date)
                         {
                             overdueDays = (DateTime.Today.Date - item.ReturnDate.Date).Days;
@@ -135,7 +135,6 @@
                             </td>
 
                             <td class="fw-semibold">৳ @computedFine.ToString("0.00")</td>
-
 
                             <td>
                                 @{
@@ -192,8 +191,11 @@
                                     }
 
                                     <!-- ✅ STUDENT ONLY: Pay Fine (Online) -->
-                                    <!-- ✅ Always show Pay Fine button for Student dashboard -->
-                                    @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Student"))
+                                    <!-- ✅ FIX: show ONLY when fine exists & overdue -->
+                                    @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Student")
+                                                                && computedFine > 0
+                                                                && item.ReturnDate != default(DateTime)
+                                                                && item.ReturnDate.Date < DateTime.Today)
                                     {
                                         <form asp-controller="Payment"
                                               asp-action="PayFine"
@@ -316,7 +318,8 @@
 
             pageRows.forEach(row => row.style.display = '');
 
-            pageInfo.textContent = `Page BDT{currentPage} of BDT{totalPages}`;
+            // ✅ FIX: template string must use ${}
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
 
             pageRows.forEach((row, i) => {
                 row.querySelector('.index').textContent = start + i + 1;

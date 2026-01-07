@@ -6,10 +6,11 @@ using LibraryManagementSystem.Service;
 
 using LibraryManagementSystem.Service.Email;
 using LibraryManagementSystem.Service.Pdf;
+using Microsoft.AspNetCore.Authentication;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authorization;               // ✅ ADDED
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using static LibraryManagementSystem.Auth_IdentityModel.IdentityModel;
 
@@ -96,6 +97,14 @@ builder.Services.AddAuthorization(options =>
         policy.Requirements.Add(new PremiumRequirement());
     });
 });
+
+
+// =====================================================
+// ✅ FIX FOR MISSING ROLES IN UI (THIS MAKES BUTTON APPEAR)
+// =====================================================
+
+// If your login does not store role claims, this will load roles from DB automatically
+builder.Services.AddScoped<IClaimsTransformation, RoleClaimsTransformation>();
 
 
 var app = builder.Build();

@@ -225,59 +225,50 @@
 
         /* Mobile Responsiveness */
         @@media (max-width: 992px) {
-            .sidebar
+            .sidebar {
+                left: -260px;
+            }
 
-        {
-            left: -260px;
-        }
+                .sidebar.active {
+                    left: 0;
+                }
 
-        .sidebar.active {
-            left: 0;
-        }
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
 
-        .main-content {
-            margin-left: 0;
-            padding: 20px;
-        }
-
-        .search-input-wrapper {
-            width: 200px;
-        }
-
+            .search-input-wrapper {
+                width: 200px;
+            }
         }
 
         @@media (max-width: 576px) {
-            .search-input-wrapper
+            .search-input-wrapper {
+                width: 100%;
+                margin-bottom: 10px;
+            }
 
-        {
-            width: 100%;
-            margin-bottom: 10px;
-        }
-
-        .navbar .ms-auto {
-            width: 100%;
-        }
-
+            .navbar .ms-auto {
+                width: 100%;
+            }
         }
 
         /* Print Styles */
         @@media print {
-            .sidebar, .navbar, .mobile-menu-btn, .btn
+            .sidebar, .navbar, .mobile-menu-btn, .btn {
+                display: none !important;
+            }
 
-        {
-            display: none !important;
-        }
+            .main-content {
+                margin: 0 !important;
+                padding: 10px !important;
+            }
 
-        .main-content {
-            margin: 0 !important;
-            padding: 10px !important;
-        }
-
-        .dashboard-card {
-            box-shadow: none;
-            border: 1px solid #ddd;
-        }
-
+            .dashboard-card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
         }
     </style>
 </head>
@@ -304,7 +295,6 @@
                                class="form-control"
                                placeholder="Search books..." />
                     </form>
-
                 </div>
 
                 <div class="dropdown">
@@ -316,7 +306,6 @@
                             : "Guest";
                         }
                         <span>@displayName</span>
-
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow">
                         <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile"><i class="bi bi-person me-2"></i>Profile</a></li>
@@ -339,22 +328,194 @@
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <ul class="sidebar-menu">
-             @if (User.IsInRole("Student"))
+
+            @* ===== Student Sidebar ===== *@
+            @if (User.IsInRole("Student"))
             {
-                <li><a asp-controller="Book" asp-action="Index" class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Books" ? "active" : "")"><i class="bi bi-book"></i> Books Management</a></li>
-                <li><a asp-controller="BookApplication" asp-action="Index" class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "BookApplication" ? "active" : "")"><i class="bi bi-journal-check"></i> Book Applications</a></li>
+                <li>
+                    <a asp-controller="Book" asp-action="Index"
+                       class="@(ViewData["ActivePage"]?.ToString() == "Books" ? "active" : "")">
+                        <i class="bi bi-book"></i> Books Management
+                    </a>
+                </li>
+
+                <li>
+                    <a asp-controller="BookApplication" asp-action="Index"
+                       class="@(ViewData["ActivePage"]?.ToString() == "BookApplication" ? "active" : "")">
+                        <i class="bi bi-journal-check"></i> Book Applications
+                    </a>
+                </li>
+
+                @* ✅ NEW: Student Premium Collection (Unlock with barcode) *@
+                <li>
+                    <a asp-controller="Premium" asp-action="Unlock"
+                       class="@(ViewData["ActivePage"]?.ToString() == "Premium" ? "active" : "")">
+                        <i class="bi bi-star"></i> Premium Collection
+                    </a>
+                </li>
             }
             else
             {
-                <li><a asp-controller="Dashboard" asp-action="Index" class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Dashboard" ? "active" : "")"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-                <li><a asp-controller="Book" asp-action="Index" class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Books" ? "active" : "")"><i class="bi bi-book"></i> Books Management</a></li>
-                <li><a asp-controller="Members" asp-action="Index" class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Members" ? "active" : "")"><i class="bi bi-people"></i> Members</a></li>
-                <li><a asp-controller="BookCategory" asp-action="Index" class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "BookCategory" ? "active" : "")"><i class="bi bi-tags"></i> Book Categories</a></li>
-                <li><a asp-controller="BookApplication" asp-action="Index" class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "BookApplication" ? "active" : "")"><i class="bi bi-journal-check"></i> Book Applications</a></li>
-                <li><a asp-controller="Reports" asp-action="Index" class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Reports" ? "active" : "")"><i class="bi bi-bar-chart-line"></i> Reports</a></li>
-                <li><a asp-controller="Settings" asp-action="Index" class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Settings" ? "active" : "")"><i class="bi bi-gear"></i> Settings</a></li>
+                @* ===== Admin/Manager/Librarian Sidebar ===== *@
+                <li>
+                    <a asp-controller="Dashboard" asp-action="Index"
+                       class="@(ViewData["ActivePage"]?.ToString() == "Dashboard" ? "active" : "")">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </li>
 
+                <li>
+                    <a asp-controller="Book" asp-action="Index"
+                       class="@(ViewData["ActivePage"]?.ToString() == "Books" ? "active" : "")">
+                        <i class="bi bi-book"></i> Books Management
+                    </a>
+                </li>
+
+                <li>
+                    <a asp-controller="Members" asp-action="Index"
+                       class="@(ViewData["ActivePage"]?.ToString() == "Members" ? "active" : "")">
+                        <i class="bi bi-people"></i> Members
+                    </a>
+                </li>
+
+                <li>
+                    <a asp-controller="BookCategory" asp-action="Index"
+                       class="@(ViewData["ActivePage"]?.ToString() == "BookCategory" ? "active" : "")">
+                        <i class="bi bi-tags"></i> Book Categories
+                    </a>
+                </li>
+
+                <li>
+                    <a asp-controller="BookApplication" asp-action="Index"
+                       class="@(ViewData["ActivePage"]?.ToString() == "BookApplication" ? "active" : "")">
+                        <i class="bi bi-journal-check"></i> Book Applications
+                    </a>
+                </li>
+
+                <li>
+                    <a asp-controller="Reports" asp-action="Index"
+                       class="@(ViewData["ActivePage"]?.ToString() == "Reports" ? "active" : "")">
+                        <i class="bi bi-bar-chart-line"></i> Reports
+                    </a>
+                </li>
+
+                <li>
+                    <a asp-controller="Settings" asp-action="Index"
+                       class="@(ViewData["ActivePage"]?.ToString() == "Settings" ? "active" : "")">
+                        <i class="bi bi-gear"></i> Settings
+                    </a>
+                </li>
+                <!-- Sidebar -->
+                <div class="sidebar" id="sidebar">
+                    <ul class="sidebar-menu">
+
+                        @if (User.IsInRole("Student"))
+                        {
+                            <li>
+                                <a asp-controller="Book" asp-action="Index"
+                                   class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Books" ? "active" : "")">
+                                    <i class="bi bi-book"></i> Books Management
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-controller="BookApplication" asp-action="Index"
+                                   class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "BookApplication" ? "active" : "")">
+                                    <i class="bi bi-journal-check"></i> Book Applications
+                                </a>
+                            </li>
+
+                            <!-- ✅ Student Premium Collection (later you will use PremiumController) -->
+                            <li>
+                                <a asp-controller="Premium" asp-action="Unlock"
+                                   class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Premium" ? "active" : "")">
+                                    <i class="bi bi-star"></i> Premium Collection
+                                </a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li>
+                                <a asp-controller="Dashboard" asp-action="Index"
+                                   class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Dashboard" ? "active" : "")">
+                                    <i class="bi bi-speedometer2"></i> Dashboard
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-controller="Book" asp-action="Index"
+                                   class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Books" ? "active" : "")">
+                                    <i class="bi bi-book"></i> Books Management
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-controller="Members" asp-action="Index"
+                                   class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Members" ? "active" : "")">
+                                    <i class="bi bi-people"></i> Members
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-controller="BookCategory" asp-action="Index"
+                                   class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "BookCategory" ? "active" : "")">
+                                    <i class="bi bi-tags"></i> Book Categories
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-controller="BookApplication" asp-action="Index"
+                                   class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "BookApplication" ? "active" : "")">
+                                    <i class="bi bi-journal-check"></i> Book Applications
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-controller="Reports" asp-action="Index"
+                                   class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Reports" ? "active" : "")">
+                                    <i class="bi bi-bar-chart-line"></i> Reports
+                                </a>
+                            </li>
+
+                            <li>
+                                <a asp-controller="Settings" asp-action="Index"
+                                   class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Settings" ? "active" : "")">
+                                    <i class="bi bi-gear"></i> Settings
+                                </a>
+                            </li>
+
+                            <!-- ✅ Librarian/Admin/Manager Premium Membership Management -->
+                            @if (User.IsInRole("Librarian") || User.IsInRole("Admin") || User.IsInRole("Manager"))
+                            {
+                                <li>
+                                    <a asp-controller="Membership" asp-action="Index"
+                                       class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Membership" ? "active" : "")">
+                                        <i class="bi bi-upc-scan"></i> Premium Membership
+                                    </a>
+                                </li>
+                            }
+                        }
+
+                    </ul>
+                </div>
+
+
+                @* ✅ NEW: Staff Premium Membership management link *@
+                @if (User.IsInRole("Librarian") || User.IsInRole("Admin") || User.IsInRole("Manager"))
+                {
+                    <li>
+                        <a asp-controller="Membership" asp-action="Index"
+                           class="@(ViewData["ActivePage"]?.ToString() == "Membership" ? "active" : "")">
+                            <i class="bi bi-upc-scan"></i> Premium Membership
+                        </a>
+                    </li>
+                }
             }
+
+            @* ===================================================================
+               ✅ KEEPING YOUR OLD LOGIC (NOT DELETED) — JUST DISABLED
+               Reason: It was duplicated and student was pointing to Membership/Index (AccessDenied)
+               ===================================================================
 
             @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Student"))
             {
@@ -364,8 +525,19 @@
                     </a>
                 </li>
             }
+            @if (User.IsInRole("Librarian") || User.IsInRole("Admin") || User.IsInRole("Manager"))
+            {
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Membership" asp-action="Index">
+                        <i class="bi bi-upc-scan"></i>
+                        <span>Premium Membership</span>
+                    </a>
+                </li>
+            }
 
-           </ul>
+            =================================================================== *@
+
+        </ul>
     </div>
 
     <!-- Main Content -->
