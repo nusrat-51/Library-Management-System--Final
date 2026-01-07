@@ -1,0 +1,23 @@
+﻿@{
+    ViewData["Title"] = "Unlock Premium";
+}
+
+<h3 class="fw-bold text-primary">Unlock Premium Section</h3>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<form asp-action="Unlock" method="post" class="mt-3">
+    @Html.AntiForgeryToken()
+
+    <label class="form-label">Scan / Enter Barcode</label>
+    <input name="barcode" class="form-control" autofocus required />
+
+    <button type="submit" class="btn btn-primary mt-3">Unlock</button>
+</form>

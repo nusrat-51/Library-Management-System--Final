@@ -1,0 +1,83 @@
+﻿@model IEnumerable<LibraryManagementSystem.Models.PremiumMembership>
+
+@{
+    ViewData["Title"] = "Premium Memberships";
+}
+
+<h3 class="fw-bold text-primary mb-4">Premium Memberships</h3>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>StudentId</th>
+                <th>Email</th>
+                <th>Purchased</th>
+                <th>Created</th>
+                <th>Purchased At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                int i = 1;
+                foreach (var m in Model)
+                {
+                    <tr>
+                        <td>@i</td>
+                        <td>@m.StudentId</td>
+                        <td>@m.StudentEmail</td>
+                        <td>
+                            @if (m.IsPurchased)
+                            {
+                                <span class="badge bg-success">Purchased</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Not Purchased</span>
+                            }
+                        </td>
+                        <td>@m.CreatedAt.ToString("MMM dd, yyyy")</td>
+                        <td>@(m.PurchasedAt.HasValue? m.PurchasedAt.Value.ToString("MMM dd, yyyy") : "-")</td>
+                        <td class="d-flex gap-2">
+
+                            <!-- Issue Barcode -->
+                            <form asp-action="Issue" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="studentId" value="@m.StudentId" />
+                                <input type="hidden" name="studentEmail" value="@m.StudentEmail" />
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    Issue Barcode
+                                </button>
+                            </form>
+
+                            <!-- Mark Purchased -->
+                            @if (!m.IsPurchased)
+                            {
+                                <form asp-action="MarkPurchased" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@m.Id" />
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        Mark Purchased
+                                    </button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+
+                    i++;
+                }
+            }
+        </tbody>
+    </table>
+</div>

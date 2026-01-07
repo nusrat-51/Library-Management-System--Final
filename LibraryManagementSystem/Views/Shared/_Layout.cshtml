@@ -355,6 +355,16 @@
                 <li><a asp-controller="Settings" asp-action="Index" class="@(ViewContext.RouteData.Values["ActivePage"]?.ToString() == "Settings" ? "active" : "")"><i class="bi bi-gear"></i> Settings</a></li>
 
             }
+
+            @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Student"))
+            {
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Membership" asp-action="Index">
+                        <i class="bi bi-star-fill me-2"></i> Premium Membership
+                    </a>
+                </li>
+            }
+
            </ul>
     </div>
 
