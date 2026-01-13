@@ -83,42 +83,39 @@ namespace LibraryManagementSystem.Controllers
                 .ToListAsync(cancellationToken);
 
 
-            // ==========================================================
-            // ✅ ADDED PART: STUDENT DASHBOARD COUNTS (Real-time DB values)
-            // ==========================================================
+            
             var email = User.Identity?.Name;
 
             if (!string.IsNullOrEmpty(email) && User.IsInRole("Student"))
             {
-                // Total Borrowed (Approved)
+                
                 ViewBag.StudentTotalBorrowed = await _context.bookApplications
                     .CountAsync(x => x.StudentEmail == email && x.Status == "Approved", cancellationToken);
 
-                // Currently Held = Approved AND return date today or future
                 ViewBag.StudentCurrentlyHeld = await _context.bookApplications
                     .CountAsync(x => x.StudentEmail == email
                                   && x.Status == "Approved"
                                   && x.ReturnDate >= DateTime.Today, cancellationToken);
 
-                // Overdue = Approved AND return date passed
+                
                 ViewBag.StudentOverdue = await _context.bookApplications
                     .CountAsync(x => x.StudentEmail == email
                                   && x.Status == "Approved"
                                   && x.ReturnDate < DateTime.Today, cancellationToken);
 
-                // Pending Requests
+                
                 ViewBag.StudentPending = await _context.bookApplications
                     .CountAsync(x => x.StudentEmail == email && x.Status == "Pending", cancellationToken);
             }
             else
             {
-                // fallback (student view won't break)
+                
                 ViewBag.StudentTotalBorrowed = 0;
                 ViewBag.StudentCurrentlyHeld = 0;
                 ViewBag.StudentOverdue = 0;
                 ViewBag.StudentPending = 0;
             }
-            // ==========================================================
+           
 
 
             return View();
