@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Library Management System</title>
 
-    <!-- Google Font: Poppins (Professional & Modern) -->
+    <!-- Google Font: Poppins -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Bootstrap 5 CSS -->
@@ -484,7 +484,7 @@
                                 </a>
                             </li>
 
-                            <!-- ✅ Librarian/Admin/Manager Premium Membership Management -->
+                            <!-- Librarian/Admin/Manager Premium Membership Management -->
                             @if (User.IsInRole("Librarian") || User.IsInRole("Admin") || User.IsInRole("Manager"))
                             {
                                 <li>
@@ -500,7 +500,7 @@
                 </div>
 
 
-                @* ✅ NEW: Staff Premium Membership management link *@
+                @*  Staff Premium Membership management link *@
                 @if (User.IsInRole("Librarian") || User.IsInRole("Admin") || User.IsInRole("Manager"))
                 {
                     <li>
@@ -512,10 +512,10 @@
                 }
             }
 
-            @* ===================================================================
-               ✅ KEEPING YOUR OLD LOGIC (NOT DELETED) — JUST DISABLED
-               Reason: It was duplicated and student was pointing to Membership/Index (AccessDenied)
-               ===================================================================
+            @* //
+               OLD LOGIC 
+              
+              
 
             @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Student"))
             {
@@ -534,8 +534,7 @@
                     </a>
                 </li>
             }
-
-            =================================================================== *@
+*@
 
         </ul>
     </div>

@@ -53,7 +53,8 @@ public class ApplicationDbContext : IdentityDbContext<
             .HasOne(ba => ba.Book)
             .WithMany()
             .HasForeignKey(ba => ba.BookId)
-            .OnDelete(DeleteBehavior.Restrict);
+            // ✅ FIX: was Restrict, change to Cascade so deleting a Book deletes its BookApplications
+            .OnDelete(DeleteBehavior.Cascade);
 
         // -----------------------------
         // FinePayment -> BookApplication
@@ -63,8 +64,8 @@ public class ApplicationDbContext : IdentityDbContext<
             .HasOne(fp => fp.BookApplication)
             .WithMany()
             .HasForeignKey(fp => fp.BookApplicationId)
-            .OnDelete(DeleteBehavior.Restrict);
-
+            // ✅ FIX: was Restrict, change to Cascade so deleting BookApplication deletes its FinePayments
+            .OnDelete(DeleteBehavior.Cascade);
 
         // -----------------------------
         // UNIQUE TranId (VERY IMPORTANT)
