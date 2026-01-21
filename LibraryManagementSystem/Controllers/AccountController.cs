@@ -7,12 +7,12 @@ using static LibraryManagementSystem.Auth_IdentityModel.IdentityModel;
 
 namespace LibraryManagementSystem.Controllers
 {
-
     public class AccountController : Controller
     {
         private readonly SignInManager<User> _signInManager;
         private readonly UserManager<User> _userManager;
         private readonly IAuthService _authService;
+
         public AccountController(
           SignInManager<User> signInManager,
           UserManager<User> userManager,
@@ -22,6 +22,8 @@ namespace LibraryManagementSystem.Controllers
             _userManager = userManager;
             _authService = authService;
         }
+
+        // ================= REGISTER =================
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Register()
@@ -35,9 +37,7 @@ namespace LibraryManagementSystem.Controllers
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
             if (!ModelState.IsValid)
-            {
                 return View(model);
-            }
 
             var result = await _authService.Register(model);
 
@@ -51,15 +51,18 @@ namespace LibraryManagementSystem.Controllers
                 .FindByIdAsync(result.UserId.ToString());
 
             if (user != null)
-            {
                 await _signInManager.SignInAsync(user, false);
-            }
-            return RedirectToAction("Index", "Dashboard");
 
-            
+            return RedirectToAction("Index", "Dashboard");
         }
 
-
+        // ================= LOGIN =================
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult Login()
+        {
+            return View();
+        }
 
         [HttpPost]
         [AllowAnonymous]
@@ -68,31 +71,25 @@ namespace LibraryManagementSystem.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, false, false);
+            var result = await _signInManager.PasswordSignInAsync(
+                model.Email, model.Password, false, false);
+
             if (result.Succeeded)
                 return LocalRedirect("/Dashboard/Index");
+
             ModelState.AddModelError(string.Empty, "Invalid login attempt.");
             return View(model);
         }
 
+        // ================= LOGOUT =================
         [HttpPost]
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
             return RedirectToAction("Login", "Account");
-
         }
 
-
-
-
-        [HttpGet]
-        [AllowAnonymous]
-        public IActionResult Login()
-        {
-            return View();
-        }
-
+        // ================= ACCESS DENIED =================
         [HttpGet]
         [AllowAnonymous]
         public IActionResult AccessDenied(string returnUrl = null)
@@ -100,6 +97,9 @@ namespace LibraryManagementSystem.Controllers
             ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
+
+        // ================= PROFILE =================
+        [Authorize]
         public async Task<IActionResult> Profile()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -107,17 +107,57 @@ namespace LibraryManagementSystem.Controllers
             return View(user);
         }
 
+        // ================= SETTINGS =================
         [Authorize]
         [HttpGet]
-        public IActionResult Settings()
+        public async Task<IActionResult> Settings()
         {
-            return View();
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login");
+            return View(user);
         }
+
+        // ================= CHANGE PASSWORD (FIXED) =================
+
+        // ✅ GET: /Account/ChangePassword
         [Authorize]
-        [HttpGet("ChangePassword")]
+        [HttpGet]
         public IActionResult ChangePassword()
         {
-            return View();
+            return View(new ChangePasswordViewModel());
+        }
+
+        // ✅ POST: /Account/ChangePassword
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return RedirectToAction("Login");
+
+            var result = await _userManager.ChangePasswordAsync(
+                user,
+                model.CurrentPassword,
+                model.NewPassword
+            );
+
+            if (!result.Succeeded)
+            {
+                foreach (var err in result.Errors)
+                    ModelState.AddModelError("", err.Description);
+
+                return View(model);
+            }
+
+            await _signInManager.RefreshSignInAsync(user);
+            TempData["Success"] = "Password changed successfully.";
+
+            return RedirectToAction("Settings");
         }
     }
 }

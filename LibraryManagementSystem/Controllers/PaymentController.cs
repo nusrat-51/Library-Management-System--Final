@@ -21,7 +21,7 @@ namespace LibraryManagementSystem.Controllers
         }
 
         // -------------------------------
-        // STEP A: create FinePayment record per application
+        //  create FinePayment record per application
         // -------------------------------
         [Authorize]
         [HttpPost]
@@ -33,7 +33,7 @@ namespace LibraryManagementSystem.Controllers
 
             if (app == null) return NotFound();
 
-            // ✅ Always calculate fine from ReturnDate (DB FineAmount may be 0 because you calculate only in UI)
+            //  calculate fine from ReturnDate 
             decimal finePerDay = 10;
 
             var today = DateTime.Today;
@@ -55,14 +55,14 @@ namespace LibraryManagementSystem.Controllers
                 return RedirectToAction("Index", "BookApplication");
             }
 
-            // ✅ If already paid, go to receipt/result
+            // already paid//
             var alreadyPaid = await _context.FinePayments
                 .FirstOrDefaultAsync(p => p.BookApplicationId == bookApplicationId && p.Status == "Paid", cancellationToken);
 
             if (alreadyPaid != null)
                 return RedirectToAction("Result", new { tran_id = alreadyPaid.TranId });
 
-            // If already has unpaid payment, reuse it (your logic kept)
+            //  unpaid payment, reuse it//
             var existing = await _context.FinePayments
                 .FirstOrDefaultAsync(p => p.BookApplicationId == bookApplicationId && p.Status == "Initiated", cancellationToken);
 
@@ -90,7 +90,7 @@ namespace LibraryManagementSystem.Controllers
         }
 
         // -------------------------------
-        // ✅ CASH PAYMENT (Manager/Admin/Librarian side)
+        // CASH PAYMENT//
         // -------------------------------
         [Authorize]
         [HttpPost]
@@ -122,7 +122,7 @@ namespace LibraryManagementSystem.Controllers
                 return RedirectToAction("Index", "BookApplication");
             }
 
-            // If already paid, show receipt
+            //  paid, show receipt//
             var alreadyPaid = await _context.FinePayments
                 .FirstOrDefaultAsync(p => p.BookApplicationId == bookApplicationId && p.Status == "Paid", cancellationToken);
 
@@ -147,7 +147,7 @@ namespace LibraryManagementSystem.Controllers
 
             _context.FinePayments.Add(payment);
 
-            // keep your "fine cleared" behavior
+            // "fine cleared"//
             app.FineAmount = 0;
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -156,7 +156,7 @@ namespace LibraryManagementSystem.Controllers
         }
 
         // -------------------------------
-        // ✅ Cash receipt page
+        // Cash receipt page
         // -------------------------------
         [Authorize]
         [HttpGet]
@@ -171,7 +171,7 @@ namespace LibraryManagementSystem.Controllers
         }
 
         // -------------------------------
-        // STEP B: Create session and redirect user to SSLCOMMERZ Hosted Page
+        // Create session and redirect user to SSLCOMMERZ Hosted Page
         // -------------------------------
         [Authorize]
         [HttpGet]
@@ -188,7 +188,7 @@ namespace LibraryManagementSystem.Controllers
             var sessionUrl = _config["SSLCOMMERZ:SandboxSessionUrl"];
             var currency = _config["SSLCOMMERZ:Currency"] ?? "BDT";
 
-            // ✅ This MUST be public URL (ngrok) so SSLCommerz can redirect back
+            //  This MUST be public URL (ngrok) so SSLCommerz can redirect back
             var publicBaseUrl = _config["SSLCOMMERZ:PublicBaseUrl"];
             if (string.IsNullOrWhiteSpace(publicBaseUrl))
                 return Content("PublicBaseUrl missing in appsettings.json (SSLCOMMERZ:PublicBaseUrl)");

@@ -47,13 +47,23 @@ builder.Services.AddIdentity<User, Role>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = "LibraryAuth";
     options.Cookie.HttpOnly = true;
 
-    options.Cookie.SameSite = SameSiteMode.None;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    
+    if (builder.Environment.IsDevelopment())
+    {
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    }
+    else
+    {
+        options.Cookie.SameSite = SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    }
 
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/AccessDenied";
@@ -67,27 +77,34 @@ builder.Services.AddTransient<ISignInHelper, SignInHelper>();
 
 builder.Services.AddHttpClient();
 
-
-// =====================================================
-// ✅ PREMIUM MEMBERSHIP + BARCODE UNLOCK (ADDED)
-// =====================================================
-
-// ✅ Needed for Session + Accessing HttpContext
+// PREMIUM MEMBERSHIP + BARCODE UNLOCK (ADDED)
 builder.Services.AddHttpContextAccessor();
 
-// ✅ Session support (for barcode unlock state)
+
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromHours(12);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+
+    
+    if (builder.Environment.IsDevelopment())
+    {
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    }
+    else
+    {
+        options.Cookie.SameSite = SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    }
 });
 
-// ✅ Premium service + policy authorization
+
 builder.Services.AddScoped<IPremiumAccessService, PremiumAccessService>();
 
-// ✅ FIX: handler must NOT be Singleton (because it uses DbContext which is Scoped)
+
 builder.Services.AddScoped<IAuthorizationHandler, PremiumHandler>();
 
 builder.Services.AddAuthorization(options =>
@@ -98,14 +115,7 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-
-// =====================================================
-// ✅ FIX FOR MISSING ROLES IN UI (THIS MAKES BUTTON APPEAR)
-// =====================================================
-
-// If your login does not store role claims, this will load roles from DB automatically
 builder.Services.AddScoped<IClaimsTransformation, RoleClaimsTransformation>();
-
 
 var app = builder.Build();
 
@@ -117,11 +127,14 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseCookiePolicy(new CookiePolicyOptions
+{
+    MinimumSameSitePolicy = SameSiteMode.Lax
+});
 
 app.UseRouting();
 
-// ✅ Session MUST be before Authentication/Authorization
-app.UseSession();
+app.UseSession(); 
 
 app.UseAuthentication();
 app.UseAuthorization();

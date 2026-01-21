@@ -2,35 +2,64 @@
 
 @using LibraryManagementSystem.Helper
 @using LibraryManagementSystem.Service
+@using Microsoft.AspNetCore.Mvc.Rendering
 
 @inject ISignInHelper SignInHelper
 @inject IRolePermissionService RolePermissionService
 
-
 @{
-    var isEdit = Model.Id != 0;
-    ViewData["Title"] = isEdit ? "Edit Book Application" : "New Book Application";
+    // This is APPLY BOOK page (student)
+    ViewData["Title"] = "Apply Book";
     ViewData["ActivePage"] = "BookApplication";
-    var role = SignInHelper.Roles;
+
+    // ✅ FIX: Dropdown source can be SelectList OR IEnumerable<SelectListItem>
+    var bookItemsObj = ViewData["BookId"];
+    IEnumerable<SelectListItem> bookItems =
+        bookItemsObj as IEnumerable<SelectListItem>
+        ?? (bookItemsObj as SelectList)?.ToList()
+        ?? Enumerable.Empty<SelectListItem>();
+
+    // Role check (your project has spelling mismatch, so keep all)
+    bool canManage =
+        User.IsInRole("Manager") ||
+        User.IsInRole("Manger") ||
+        User.IsInRole("Management") ||
+        User.IsInRole("Mangement") ||
+        User.IsInRole("Admin") ||
+        User.IsInRole("Administrator") ||
+        User.IsInRole("Librarian");
+
+    // ✅ Student apply page: allow student to type (NOT readonly)
+    bool isStudent = User.IsInRole("Student");
 }
-
-
-
 
 <!-- Form Card -->
 <div class="row justify-content-center">
     <div class="col-lg-10 col-xxl-8">
         <div class="dashboard-card p-5">
-            <form asp-action="CreateOrEdit" method="post" class="needs-validation" novalidate>
+            <!-- ✅ POST to Applybook -->
+            <form asp-controller="BookApplication" asp-action="Applybook" method="post" class="needs-validation" novalidate>
+                @Html.AntiForgeryToken()
+
                 <input type="hidden" asp-for="Id" />
 
+                @* Safe hidden StudentId (controller will override for Student anyway) *@
+                <input type="hidden" asp-for="StudentId" value="@(SignInHelper.UserId ?? 0)" />
+
                 <div class="row g-4">
+
                     <!-- Student Email -->
                     <div class="col-md-6">
                         <label asp-for="StudentEmail" class="form-label fw-semibold"></label>
                         <div class="input-group input-group-lg">
                             <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                            <input asp-for="StudentEmail" type="email" class="form-control" placeholder="e.g. student@example.com" required />
+
+                            <!-- ✅ FIX: Student can type (remove readonly) -->
+                            <input asp-for="StudentEmail"
+                                   type="email"
+                                   class="form-control"
+                                   placeholder="e.g. student@example.com"
+                                   required />
                         </div>
                         <span asp-validation-for="StudentEmail" class="text-danger small"></span>
                     </div>
@@ -40,7 +69,12 @@
                         <label asp-for="StudentIdCardNo" class="form-label fw-semibold"></label>
                         <div class="input-group input-group-lg">
                             <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
-                            <input asp-for="StudentIdCardNo" class="form-control" placeholder="e.g. STU001234" required />
+
+                            <!-- ✅ FIX: Student can type (remove readonly) -->
+                            <input asp-for="StudentIdCardNo"
+                                   class="form-control"
+                                   placeholder="e.g. STU001234"
+                                   required />
                         </div>
                         <span asp-validation-for="StudentIdCardNo" class="text-danger small"></span>
                     </div>
@@ -50,13 +84,17 @@
                         <label asp-for="BookId" class="form-label fw-semibold">Book</label>
                         <div class="input-group input-group-lg">
                             <span class="input-group-text"><i class="bi bi-book"></i></span>
-                            <select asp-for="BookId" class="form-select" asp-items="@ViewBag.BookId" required>
+
+                            <!-- ✅ FIX: Use correct list type -->
+                            <select asp-for="BookId" class="form-select" asp-items="bookItems" required>
                                 <option value="">-- Select Book --</option>
                             </select>
                         </div>
                         <span asp-validation-for="BookId" class="text-danger small"></span>
                     </div>
-                    @if (User.IsInRole("Manger"))
+
+                    @* Staff-only fields (kept logic, but only visible when canManage) *@
+                    @if (canManage)
                     {
                         <!-- Status -->
                         <div class="col-md-6">
@@ -83,7 +121,6 @@
                         </div>
                     }
 
-
                     <!-- Issue Date -->
                     <div class="col-md-6">
                         <label asp-for="IssueDate" class="form-label fw-semibold"></label>
@@ -108,14 +145,13 @@
                 <hr class="my-5">
 
                 <div class="d-flex justify-content-end gap-3">
-                    <a asp-action="Index" class="btn btn-outline-secondary btn-lg shadow-sm">
+                    <a asp-action="Index" asp-controller="BookApplication" class="btn btn-outline-secondary btn-lg shadow-sm">
                         <i class="bi bi-x-circle me-2"></i>Cancel
                     </a>
 
                     <button type="submit" class="btn btn-primary btn-lg px-5 shadow-sm me-3">
                         <i class="bi bi-save me-2"></i> Save Book
                     </button>
-
                 </div>
             </form>
         </div>
@@ -123,7 +159,6 @@
 </div>
 
 <style>
-    /* Enhanced form styling to match your theme */
     .dashboard-card {
         border-radius: 20px !important;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
@@ -149,6 +184,24 @@
         border-radius: 12px;
         padding: 0.75rem 1.5rem;
     }
+
+    /* ✅ FIX: inputs/selects not clickable (z-index / overlay issues) */
+    .dashboard-card,
+    .dashboard-card * {
+        pointer-events: auto !important;
+    }
+
+        .dashboard-card input,
+        .dashboard-card select,
+        .dashboard-card textarea,
+        .dashboard-card button,
+        .dashboard-card .input-group,
+        .dashboard-card .input-group-text,
+        .dashboard-card .form-control,
+        .dashboard-card .form-select {
+            position: relative;
+            z-index: 10;
+        }
 </style>
 
 @section Scripts {

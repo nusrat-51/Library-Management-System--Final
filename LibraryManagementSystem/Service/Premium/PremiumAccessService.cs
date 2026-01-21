@@ -28,10 +28,7 @@ namespace LibraryManagementSystem.Service
         {
             return await _db.PremiumMemberships
                 .AsNoTracking()
-                .AnyAsync(x =>
-                    x.StudentId == studentId &&
-                    x.IsPurchased,
-                    ct);
+                .AnyAsync(x => x.StudentId == studentId && x.IsPurchased, ct);
         }
 
         // ✅ Validate barcode entered by student
@@ -42,6 +39,16 @@ namespace LibraryManagementSystem.Service
 
             barcodeRaw = barcodeRaw.Trim();
 
+            // ✅ DEMO / BACKUP: allow unlock code from appsettings.json
+            // appsettings.json:
+            // "Premium": { "UnlockBarcode": "1234", "BarcodeSalt": "yoursalt" }
+            var unlockCode = _config["Premium:UnlockBarcode"];
+            if (!string.IsNullOrWhiteSpace(unlockCode) && barcodeRaw == unlockCode.Trim())
+            {
+                return true;
+            }
+
+            // ✅ REAL SYSTEM: hashed barcode stored in DB
             var hash = HashBarcode(barcodeRaw);
 
             return await _db.PremiumMemberships
