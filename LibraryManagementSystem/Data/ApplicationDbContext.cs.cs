@@ -28,53 +28,44 @@ public class ApplicationDbContext : IdentityDbContext<
     public DbSet<BookCategory> BookCategories { get; set; }
     public DbSet<EmailNotificationLog> EmailNotificationLogs { get; set; }
 
-    // ✅ Fine payment table
+    // Fine payment table
     public DbSet<FinePayment> FinePayments { get; set; }
     public DbSet<LibraryManagementSystem.Models.PremiumMembership> PremiumMemberships { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // ✅ Identity tables
+        
         base.OnModelCreating(modelBuilder);
 
-        // -----------------------------
-        // BookCategory -> Book
-        // -----------------------------
+        
         modelBuilder.Entity<Book>()
             .HasOne(b => b.bookCategory)
             .WithMany(c => c.Books)
             .HasForeignKey(b => b.CategoryId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // -----------------------------
-        // BookApplication -> Book
-        // -----------------------------
+        
         modelBuilder.Entity<BookApplication>()
             .HasOne(ba => ba.Book)
             .WithMany()
             .HasForeignKey(ba => ba.BookId)
-            // ✅ FIX: was Restrict, change to Cascade so deleting a Book deletes its BookApplications
+            
             .OnDelete(DeleteBehavior.Cascade);
 
-        // -----------------------------
-        // FinePayment -> BookApplication
-        // -----------------------------
-        // ✅ FinePayment -> BookApplication relationship (prevents BookApplicationId1 shadow column)
+       
         modelBuilder.Entity<FinePayment>()
             .HasOne(fp => fp.BookApplication)
             .WithMany()
             .HasForeignKey(fp => fp.BookApplicationId)
-            // ✅ FIX: was Restrict, change to Cascade so deleting BookApplication deletes its FinePayments
+           
             .OnDelete(DeleteBehavior.Cascade);
 
-        // -----------------------------
-        // UNIQUE TranId (VERY IMPORTANT)
-        // -----------------------------
+        
         modelBuilder.Entity<FinePayment>()
             .HasIndex(fp => fp.TranId)
             .IsUnique();
 
-        // Apply other configurations
+        
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
 

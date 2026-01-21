@@ -236,7 +236,7 @@ namespace LibraryManagementSystem.Controllers
             var response = await client.PostAsync(sessionUrl, new FormUrlEncodedContent(postData), cancellationToken);
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
 
-            // ✅ IMPORTANT: show SSLCommerz errors clearly
+            //  IMPORTANT: show SSLCommerz errors clearly
             if (!response.IsSuccessStatusCode)
             {
                 return Content($"SSLCOMMERZ HTTP ERROR: {(int)response.StatusCode}\n\n{json}");

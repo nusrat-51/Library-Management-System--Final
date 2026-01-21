@@ -84,11 +84,11 @@
                     {
                         var statusLower = (item.Status ?? "").ToLower();
 
-                        // ✅ compute fine if overdue (even when DB fine is 0)
+                        
                         decimal finePerDay = 10m;
                         int overdueDays = 0;
 
-                        // ✅ FIX: overdue fine should calculate for ANY status if return date passed
+                        
                         if (item.ReturnDate != default(DateTime)
                         && DateTime.Today > item.ReturnDate.Date)
                         {
@@ -190,8 +190,7 @@
                                         </form>
                                     }
 
-                                    <!-- ✅ STUDENT ONLY: Pay Fine (Online) -->
-                                    <!-- ✅ FIX: show ONLY when fine exists & overdue -->
+                                  
                                     @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Student")
                                                                 && computedFine > 0
                                                                 && item.ReturnDate != default(DateTime)
@@ -215,8 +214,7 @@
                                         </form>
                                     }
 
-                                    <!-- ✅ MANAGER/ADMIN/LIBRARIAN ONLY: Pay Cash -->
-                                    <!-- ✅ Your logic kept exactly -->
+                                    
                                     @if (isAdminSide
                                                                 && computedFine > 0
                                                                 && (item.Status ?? "") == "Approved"
@@ -318,7 +316,7 @@
 
             pageRows.forEach(row => row.style.display = '');
 
-            // ✅ FIX: template string must use ${}
+            
             pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
 
             pageRows.forEach((row, i) => {

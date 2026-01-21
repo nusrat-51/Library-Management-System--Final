@@ -8,14 +8,13 @@ namespace LibraryManagementSystem.Models
     {
         public int Id { get; set; }
 
-        // Link payment to a borrow/application record (recommended)
         public int BookApplicationId { get; set; }
 
-        // ✅ ADD THIS (navigation + FK mapping)
+       
         [ForeignKey(nameof(BookApplicationId))]
         public BookApplication? BookApplication { get; set; }
 
-        // Who is paying
+        
         public long StudentId { get; set; }
 
         [MaxLength(256)]

@@ -41,16 +41,16 @@ namespace LibraryManagementSystem.Controllers
             var startDate = new DateTime(selectedYear, selectedMonth, 1);
             var endDate = startDate.AddMonths(1);
 
-            // ✅ 1) Total issued books in month (same logic)
+            //  Total issued books in month (same logic)
             var totalIssued = await _context.bookApplications
                 .CountAsync(x => x.Status == "Approved"
                               && x.CreatedAt >= startDate
                               && x.CreatedAt < endDate, cancellationToken);
 
-            // ✅ 2) Fine calculation (same logic)
+            // Fine calculation (same logic)
             decimal finePerDay = 10;
 
-            // ✅ FIX: Include Book to safely read Book.Title
+            //  Include Book to safely read Book.Title
             var monthlyApproved = await _context.bookApplications
                 .Include(x => x.Book)
                 .Where(x => x.Status == "Approved"

@@ -22,10 +22,7 @@
         </nav>
     </div>
 
-    @* ✅ Updated (no logic removed):
-       Your original was: if (User.IsInRole("Mangement"))
-       That role name looks like a typo.
-       Use the same permission logic you already use everywhere else.
+    @* 
     *@
     @if (RolePermissionService.CanEdit(role))
     {
@@ -129,10 +126,7 @@
                                         </form>
                                     }
 
-                                    @* ✅ Updated Apply button (no logic removed):
-                                       - Correct route param: bookId
-                                       - Correct icon: journal/check (not pencil)
-                                       - Disable apply when out of stock
+                                    @* 
                                     *@
                                     @if (User.IsInRole("Student"))
                                     {

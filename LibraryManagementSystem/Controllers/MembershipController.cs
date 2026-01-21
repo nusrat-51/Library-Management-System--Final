@@ -88,19 +88,19 @@ namespace LibraryManagementSystem.Controllers
                 existing.StudentEmail = studentEmail;
                 existing.BarcodeHash = _premiumService.HashBarcode(barcode);
 
-                // ✅ keep purchased status as-is (do not break old logic)
+                //  keep purchased status as-is (do not break old logic)
                 if (!existing.IsPurchased)
                     existing.CreatedAt = DateTime.Now;
             }
 
             await _db.SaveChangesAsync(ct);
 
-            // ✅ show barcode to librarian so they can write/print it
+            // show barcode to librarian so they can write/print it
             TempData["Success"] = $"Barcode issued successfully. Barcode: {barcode}";
             return RedirectToAction("Index");
         }
 
-        // ✅ Mark purchased (after taking 100 taka)
+        //  Mark purchased (after taking 100 taka)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkPurchased(int id, CancellationToken ct)

@@ -28,6 +28,7 @@ namespace LibraryManagementSystem.Controllers
         {
             return View(new RegisterViewModel());
         }
+
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -73,6 +74,7 @@ namespace LibraryManagementSystem.Controllers
             ModelState.AddModelError(string.Empty, "Invalid login attempt.");
             return View(model);
         }
+
         [HttpPost]
         public async Task<IActionResult> Logout()
         {

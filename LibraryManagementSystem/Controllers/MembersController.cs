@@ -20,7 +20,7 @@ namespace LibraryManagementSystem.Controllers
                 .OrderByDescending(x => x.RegisterDate)
                 .ToListAsync(cancellationToken);
 
-            // ✅ ADDED (does not affect existing logic)
+            // ADDED (does not affect existing logic)
             // Used by Views/Members/Index.cshtml to show Premium member count badge (Purchased only)
             ViewBag.PremiumCount = await _context.PremiumMemberships
                 .CountAsync(x => x.IsPurchased, cancellationToken);

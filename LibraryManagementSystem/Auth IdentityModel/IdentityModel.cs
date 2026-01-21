@@ -20,7 +20,7 @@ public class IdentityModel
      
     }
 
-    // ------------------ Roles ------------------
+    // Roles //
     [Table("Roles")]
     public class Role : IdentityRole<long>
     {
@@ -36,8 +36,8 @@ public class IdentityModel
         public DateTimeOffset? UpdatedDateUtc { get; set; }
     }
 
-    // ------------------ User Roles ------------------
-    [Table("UserRoles")]
+    // User Roles //
+   [Table("UserRoles")]
     public class UserRole : IdentityUserRole<long>
     {
     }
@@ -49,8 +49,7 @@ public class IdentityModel
     }
 
     // ------------------ User Logins ------------------
-    // ❌ এখানে আর কোন Key / ForeignKey override করা যাবে না
-    // IdentityUserLogin-এর PK = (LoginProvider, ProviderKey)
+    
     [Table("UserLogins")]
     public class UserLogin : IdentityUserLogin<long>
     {

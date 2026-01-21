@@ -25,7 +25,7 @@ public class BookController : Controller
         return View(data);
     }
 
-    // ✅ NEW PART ADDED (Search Support) - does not change your existing logic
+    // NEW PART ADDED (Search Support) - does not change your existing logic
     [HttpGet]
     public async Task<IActionResult> Index(string? term, CancellationToken cancellationToken)
     {
@@ -43,7 +43,7 @@ public class BookController : Controller
 
         return View(data);
     }
-    // ✅ END NEW PART
+    // END NEW PART
 
 
     [HttpGet]

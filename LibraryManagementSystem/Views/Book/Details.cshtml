@@ -2,7 +2,7 @@
 
 @{
     ViewData["Title"] = "Book Details";
-    ViewData["ActivePage"] = "Books"; // Assuming this is under Books Management
+    ViewData["ActivePage"] = "Books"; 
 }
 
 <!-- Page Header -->
@@ -77,7 +77,7 @@
                         <hr class="my-5">
 
                         <div class="d-flex gap-3">
-                            <!-- ✅ FIXED: call existing action Applybook(id) -->
+                           
                             <a asp-controller="BookApplication"
                                asp-action="Applybook"
                                asp-route-id="@Model.Id"

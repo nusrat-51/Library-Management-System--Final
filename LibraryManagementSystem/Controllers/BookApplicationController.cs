@@ -182,7 +182,7 @@ public class BookApplicationController : Controller
     {
         var data = await _bookApplicationRepository.GetAllBookApplicationAsync(cancellationToken);
 
-        // ✅ If student visits Recent, filter to own data
+        // If student visits Recent, filter to own data
         if (User.IsInRole("Student"))
         {
             var studentId = _signInHelper.UserId ?? 0;
@@ -205,7 +205,7 @@ public class BookApplicationController : Controller
         // Sort newest first (real)
         data = data.OrderByDescending(x => x.CreatedAt);
 
-        // ✅ Calculate fine dynamically here too
+        // Calculate fine dynamically here too
         decimal finePerDay = 10m;
         ApplyDynamicFine(data, finePerDay);
 
