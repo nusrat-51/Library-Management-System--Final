@@ -3,14 +3,12 @@ using LibraryManagementSystem.Data;
 using LibraryManagementSystem.Helper;
 using LibraryManagementSystem.Repository;
 using LibraryManagementSystem.Service;
-
 using LibraryManagementSystem.Service.Email;
 using LibraryManagementSystem.Service.Pdf;
 using Microsoft.AspNetCore.Authentication;
-
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using static LibraryManagementSystem.Auth_IdentityModel.IdentityModel;
 
@@ -47,13 +45,11 @@ builder.Services.AddIdentity<User, Role>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = "LibraryAuth";
     options.Cookie.HttpOnly = true;
 
-    
     if (builder.Environment.IsDevelopment())
     {
         options.Cookie.SameSite = SameSiteMode.Lax;
@@ -80,7 +76,7 @@ builder.Services.AddHttpClient();
 // PREMIUM MEMBERSHIP + BARCODE UNLOCK (ADDED)
 builder.Services.AddHttpContextAccessor();
 
-
+// ✅ Session services
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -88,7 +84,6 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 
-    
     if (builder.Environment.IsDevelopment())
     {
         options.Cookie.SameSite = SameSiteMode.Lax;
@@ -101,9 +96,7 @@ builder.Services.AddSession(options =>
     }
 });
 
-
 builder.Services.AddScoped<IPremiumAccessService, PremiumAccessService>();
-
 
 builder.Services.AddScoped<IAuthorizationHandler, PremiumHandler>();
 
@@ -127,14 +120,18 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+// ✅ FIX: CookiePolicy should NOT override cookies (Session/Auth) to Lax forcibly
+// Keep your per-cookie SameSite settings from AddSession + ConfigureApplicationCookie
 app.UseCookiePolicy(new CookiePolicyOptions
 {
-    MinimumSameSitePolicy = SameSiteMode.Lax
+    MinimumSameSitePolicy = SameSiteMode.Unspecified
 });
 
 app.UseRouting();
 
-app.UseSession(); 
+// ✅ Session must be AFTER Routing, BEFORE Authentication/Authorization
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

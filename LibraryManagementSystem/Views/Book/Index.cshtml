@@ -1,5 +1,6 @@
 ﻿@using LibraryManagementSystem.Helper
 @using LibraryManagementSystem.Service
+@using Microsoft.AspNetCore.Http
 @model IEnumerable<LibraryManagementSystem.Models.Book>
 @inject ISignInHelper SignInHelper
 @inject IRolePermissionService RolePermissionService
@@ -8,6 +9,9 @@
     ViewData["Title"] = "Books Management";
     ViewData["ActivePage"] = "Books";
     var role = SignInHelper.Roles;
+
+    // ✅ FIX: use the real session key from PremiumHandler
+    bool premiumUnlocked = Context.Session.GetString(PremiumHandler.PremiumSessionKey) == "1";
 }
 
 <!-- Page Header -->
@@ -22,8 +26,6 @@
         </nav>
     </div>
 
-    @* 
-    *@
     @if (RolePermissionService.CanEdit(role))
     {
         <a asp-action="CreateOrEdit" class="btn btn-primary shadow-sm btn-lg">
@@ -126,21 +128,10 @@
                                         </form>
                                     }
 
-                                    @* 
-                                    *@
+                                    @* ✅ Student Apply logic (Premium protected) *@
                                     @if (User.IsInRole("Student"))
                                     {
-                                        if (item.AvailableCopies > 0)
-                                        {
-                                            <a asp-controller="BookApplication"
-                                               asp-action="Applybook"
-                                               asp-route-bookId="@item.Id"
-                                               class="btn btn-success btn-sm shadow-sm"
-                                               title="Apply to Borrow">
-                                                <i class="bi bi-journal-arrow-up"></i>
-                                            </a>
-                                        }
-                                        else
+                                        if (item.AvailableCopies <= 0)
                                         {
                                             <button type="button"
                                                     class="btn btn-secondary btn-sm shadow-sm"
@@ -148,6 +139,35 @@
                                                     disabled>
                                                 <i class="bi bi-journal-x"></i>
                                             </button>
+                                        }
+                                        else
+                                        {
+                                            if (item.IsPremium && !premiumUnlocked)
+                                            {
+                                                <button type="button"
+                                                        class="btn btn-secondary btn-sm shadow-sm"
+                                                        title="Premium book. Unlock using barcode to apply."
+                                                        disabled>
+                                                    <i class="bi bi-journal-lock"></i>
+                                                </button>
+
+                                                <a asp-controller="Premium"
+                                                   asp-action="Unlock"
+                                                   class="btn btn-outline-primary btn-sm shadow-sm"
+                                                   title="Unlock Premium">
+                                                    <i class="bi bi-upc-scan"></i>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a asp-controller="BookApplication"
+                                                   asp-action="Applybook"
+                                                   asp-route-id="@item.Id"
+                                                   class="btn btn-success btn-sm shadow-sm"
+                                                   title="Apply to Borrow">
+                                                    <i class="bi bi-journal-arrow-up"></i>
+                                                </a>
+                                            }
                                         }
                                     }
 
@@ -237,14 +257,12 @@
             pagination.innerHTML = '';
             if (totalPages <= 1) return;
 
-            // Previous
             const prevLi = document.createElement('li');
             prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
             prevLi.innerHTML = '<a class="page-link" href="#">Previous</a>';
             if (currentPage > 1) prevLi.addEventListener('click', (e) => { e.preventDefault(); currentPage--; filterAndPaginate(); });
             pagination.appendChild(prevLi);
 
-            // Page numbers (smart display)
             for (let i = 1; i <= totalPages; i++) {
                 if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) {
                     const li = document.createElement('li');
@@ -260,7 +278,6 @@
                 }
             }
 
-            // Next
             const nextLi = document.createElement('li');
             nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
             nextLi.innerHTML = '<a class="page-link" href="#">Next</a>';

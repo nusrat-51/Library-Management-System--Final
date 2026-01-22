@@ -1,7 +1,9 @@
 ﻿using LibraryManagementSystem.Helper;
 using LibraryManagementSystem.Models;
 using LibraryManagementSystem.Repository;
+using LibraryManagementSystem.Service;          // ✅ PremiumHandler
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryManagementSystem.Controllers;
@@ -12,6 +14,12 @@ public class BookApplicationController : Controller
     private readonly IBookApplicationRepository _bookApplicationRepository;
     private readonly IBookRepository _bookRepository;
     private readonly ISignInHelper _signInHelper;
+
+    // ✅ Use SAME session key everywhere (PremiumHandler constant)
+    private const string PremiumSessionKey = PremiumHandler.PremiumSessionKey;
+
+    // ✅ store student card no in session (set this in PremiumController Unlock)
+    private const string StudentCardSessionKey = "StudentIdCardNo";
 
     public BookApplicationController(
         IBookApplicationRepository bookApplicationRepository,
@@ -24,7 +32,6 @@ public class BookApplicationController : Controller
     }
 
     // ✅ Helper: calculate fine dynamically (UI only)
-    // ✅ Fine applies only to Approved (issued) applications
     private static void ApplyDynamicFine(IEnumerable<BookApplication> list, decimal finePerDay)
     {
         foreach (var item in list)
@@ -43,11 +50,20 @@ public class BookApplicationController : Controller
         }
     }
 
+    // ✅ Helper: StudentIdCardNo must NEVER be null/empty (DB constraint)
+    private string GetSafeStudentCardNo(long studentId)
+    {
+        var cardNo = (HttpContext.Session.GetString(StudentCardSessionKey) ?? "").Trim();
+        if (!string.IsNullOrWhiteSpace(cardNo)) return cardNo;
+
+        // fallback (so DB never gets NULL)
+        return studentId.ToString();
+    }
+
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var data = await _bookApplicationRepository.GetAllBookApplicationAsync(cancellationToken);
 
-        // ✅ Student sees ONLY own applications
         if (User.IsInRole("Student"))
         {
             var studentId = _signInHelper.UserId ?? 0;
@@ -72,7 +88,6 @@ public class BookApplicationController : Controller
         var data = await _bookApplicationRepository.GetBookApplicationByIdAsync(id, cancellationToken);
         if (data == null) return NotFound();
 
-        // ✅ Block students from editing others
         if (User.IsInRole("Student"))
         {
             var studentId = _signInHelper.UserId ?? 0;
@@ -89,50 +104,54 @@ public class BookApplicationController : Controller
     {
         ViewData["BookId"] = _bookRepository.Dropdown();
 
-        // ✅ If validation fails, show errors
         if (!ModelState.IsValid)
             return View(bookApplication);
 
         var studentId = _signInHelper.UserId ?? 0;
 
-        // ✅ Student can only create/update for themselves (prevent tampering)
         if (User.IsInRole("Student"))
         {
             if (studentId <= 0) return Forbid();
             bookApplication.StudentId = studentId;
-
-            // ✅ protect email/id from tampering
             bookApplication.StudentEmail = User?.Identity?.Name ?? bookApplication.StudentEmail;
+
+            // ✅ ensure StudentIdCardNo
+            bookApplication.StudentIdCardNo = (bookApplication.StudentIdCardNo ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(bookApplication.StudentIdCardNo))
+                bookApplication.StudentIdCardNo = GetSafeStudentCardNo(studentId);
         }
 
         if (bookApplication.Id == 0)
         {
-            // ✅ FIX: IDENTITY INSERT PROTECTION (MOST IMPORTANT)
-            // DB auto-generate করবে, তাই 0 করে দাও
             bookApplication.Id = 0;
-
-            // ✅ new request = Pending
             bookApplication.Status = "Pending";
 
-            // ✅ ensure CreatedAt
             if (bookApplication.CreatedAt == default)
                 bookApplication.CreatedAt = DateTime.UtcNow;
 
-            // if non-student creates, ensure studentId exists
             if (!User.IsInRole("Student") && bookApplication.StudentId <= 0)
                 bookApplication.StudentId = 1;
+
+            // ✅ ensure StudentIdCardNo (non-student too)
+            bookApplication.StudentIdCardNo = (bookApplication.StudentIdCardNo ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(bookApplication.StudentIdCardNo))
+                bookApplication.StudentIdCardNo = GetSafeStudentCardNo(bookApplication.StudentId);
 
             await _bookApplicationRepository.AddBookApplicationAsync(bookApplication, cancellationToken);
             return RedirectToAction(nameof(Index));
         }
 
-        // ✅ Block students from updating others
         if (User.IsInRole("Student"))
         {
             var old = await _bookApplicationRepository.GetBookApplicationByIdAsync(bookApplication.Id, cancellationToken);
             if (old == null) return NotFound();
             if (old.StudentId != studentId) return Forbid();
         }
+
+        // ✅ ensure StudentIdCardNo never null
+        bookApplication.StudentIdCardNo = (bookApplication.StudentIdCardNo ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(bookApplication.StudentIdCardNo))
+            bookApplication.StudentIdCardNo = GetSafeStudentCardNo(bookApplication.StudentId);
 
         await _bookApplicationRepository.UpdateBookApplicationAsync(bookApplication, cancellationToken);
         return RedirectToAction(nameof(Index));
@@ -144,7 +163,6 @@ public class BookApplicationController : Controller
         var data = await _bookApplicationRepository.GetBookApplicationByIdAsync(id, cancellationToken);
         if (data == null) return NotFound();
 
-        // ✅ Block students from opening others
         if (User.IsInRole("Student"))
         {
             var studentId = _signInHelper.UserId ?? 0;
@@ -161,7 +179,6 @@ public class BookApplicationController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        // ✅ Block students from deleting
         if (User.IsInRole("Student"))
             return Forbid();
 
@@ -169,34 +186,47 @@ public class BookApplicationController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ✅ Applybook GET (kept) + ✅ FIX: auto fill email/date + protect BookId
+    // ✅ Applybook GET (manual form)
     [HttpGet]
     public async Task<IActionResult> Applybook(int id, CancellationToken cancellationToken)
     {
         ViewData["BookId"] = _bookRepository.Dropdown();
 
-        var model = new BookApplication();
-
-        // ✅ Auto fill student email if available (your login uses email as username)
-        model.StudentEmail = User?.Identity?.Name ?? "";
-
-        // ✅ default dates
-        model.IssueDate = DateTime.Today;
-        model.ReturnDate = DateTime.Today.AddDays(7);
+        var model = new BookApplication
+        {
+            StudentEmail = User?.Identity?.Name ?? "",
+            IssueDate = DateTime.Today,
+            ReturnDate = DateTime.Today.AddDays(7)
+        };
 
         if (id > 0)
         {
             var book = await _bookRepository.GetBookByIdAsync(id, cancellationToken);
             if (book == null) return NotFound();
 
+            // ✅ Premium protection (GET)
+            if (book.IsPremium == true)
+            {
+                var isUnlocked = HttpContext.Session.GetString(PremiumSessionKey) == "1";
+                if (!isUnlocked)
+                {
+                    TempData["Error"] = "This is a Premium book. Please unlock Premium using your barcode first.";
+                    return RedirectToAction("Unlock", "Premium");
+                }
+            }
+
             model.BookId = book.Id;
             model.StudentId = _signInHelper.UserId ?? 0;
+
+            // ✅ autofill card number (so form submit won't be NULL)
+            var sid = model.StudentId;
+            model.StudentIdCardNo = sid > 0 ? GetSafeStudentCardNo(sid) : "";
         }
 
         return View(model);
     }
 
-    // ✅ Applybook POST (Save Book button কাজ করবে)
+    // ✅ Applybook POST (manual submit)
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "Student")]
@@ -204,32 +234,41 @@ public class BookApplicationController : Controller
     {
         ViewData["BookId"] = _bookRepository.Dropdown();
 
-        // ✅ validate login studentId
         var studentId = _signInHelper.UserId ?? 0;
         if (studentId <= 0) return Forbid();
 
-        // ✅ FIX: IDENTITY INSERT PROTECTION (MOST IMPORTANT)
         model.Id = 0;
-
-        // ✅ student can only apply for self
         model.StudentId = studentId;
-
-        // ✅ protect email from tampering (always take logged in email)
         model.StudentEmail = User?.Identity?.Name ?? model.StudentEmail;
-
-        // ✅ new request = Pending
         model.Status = "Pending";
 
-        // ✅ ensure CreatedAt
         if (model.CreatedAt == default)
             model.CreatedAt = DateTime.UtcNow;
 
-        // ✅ basic validation
         if (model.BookId <= 0)
         {
             ModelState.AddModelError("", "Please select a valid book.");
             return View(model);
         }
+
+        // ✅ Premium protection (POST)
+        var book = await _bookRepository.GetBookByIdAsync(model.BookId, cancellationToken);
+        if (book == null) return NotFound();
+
+        if (book.IsPremium == true)
+        {
+            var isUnlocked = HttpContext.Session.GetString(PremiumSessionKey) == "1";
+            if (!isUnlocked)
+            {
+                TempData["Error"] = "This is a Premium book. Please unlock Premium using your barcode first.";
+                return RedirectToAction("Unlock", "Premium");
+            }
+        }
+
+        // ✅ IMPORTANT: StudentIdCardNo cannot be NULL in DB
+        model.StudentIdCardNo = (model.StudentIdCardNo ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(model.StudentIdCardNo))
+            model.StudentIdCardNo = GetSafeStudentCardNo(studentId);
 
         await _bookApplicationRepository.AddBookApplicationAsync(model, cancellationToken);
 
@@ -237,7 +276,8 @@ public class BookApplicationController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ✅ Premium Collection Apply button (quick submit)
+    // ✅ Premium Collection Apply button
+    // ✅ FIX: Do NOT auto submit. Just redirect to Applybook manual form.
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "Student")]
@@ -246,27 +286,24 @@ public class BookApplicationController : Controller
         var studentId = _signInHelper.UserId ?? 0;
         if (studentId <= 0) return Forbid();
 
+        var isUnlocked = HttpContext.Session.GetString(PremiumSessionKey) == "1";
+        if (!isUnlocked)
+        {
+            TempData["Error"] = "Please unlock Premium using your barcode first.";
+            return RedirectToAction("Unlock", "Premium");
+        }
+
         var book = await _bookRepository.GetBookByIdAsync(bookId, cancellationToken);
         if (book == null) return NotFound();
 
-        var app = new BookApplication
+        if (book.IsPremium != true)
         {
-            // ✅ FIX: identity insert protection
-            Id = 0,
+            TempData["Error"] = "This book is not a Premium book.";
+            return RedirectToAction("Index", "Premium");
+        }
 
-            BookId = book.Id,
-            StudentId = studentId,
-            StudentEmail = User?.Identity?.Name ?? "",
-            Status = "Pending",
-            CreatedAt = DateTime.UtcNow,
-            IssueDate = DateTime.Today,
-            ReturnDate = DateTime.Today.AddDays(7)
-        };
-
-        await _bookApplicationRepository.AddBookApplicationAsync(app, cancellationToken);
-
-        TempData["Success"] = "Application submitted successfully!";
-        return RedirectToAction(nameof(Index));
+        // ✅ Redirect to manual apply form (no auto insert)
+        return RedirectToAction("Applybook", "BookApplication", new { id = bookId });
     }
 
     [HttpGet]

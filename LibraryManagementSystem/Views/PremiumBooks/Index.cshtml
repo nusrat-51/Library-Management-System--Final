@@ -2,26 +2,52 @@
 
 @{
     ViewData["Title"] = "Premium Books";
+    ViewData["ActivePage"] = "PremiumBooks";
+
+    // ✅ Admin ONLY (Remove button only for Admin/Administrator)
+    bool isAdmin =
+        User.IsInRole("Admin") ||
+        User.IsInRole("Administrator");
+
+    // ✅ Manager roles (can edit/add, but NOT remove)
+    bool isManager =
+        User.IsInRole("Manager") ||
+        User.IsInRole("Management") ||
+        User.IsInRole("Mangement");
+
+    // ✅ Librarian
+    bool isLibrarian = User.IsInRole("Librarian");
+
+    // ✅ who can add / edit (Admin + Manager + Librarian)
+    bool canAddOrEdit = isAdmin || isManager || isLibrarian;
+
+    // ✅ safety: if somehow someone else opens page, hide all actions
+    bool showActions = canAddOrEdit || isAdmin;
 }
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-    <h2 class="text-primary mb-0">Premium Books</h2>
+<h2 class="text-primary mb-3">
+    <i class="bi bi-star-fill me-2"></i> Premium Books
+</h2>
 
-    <a asp-controller="PremiumBooks" asp-action="Create" class="btn btn-primary btn-sm">
+@if (canAddOrEdit)
+{
+    <a asp-controller="PremiumBooks"
+       asp-action="Create"
+       class="btn btn-primary mb-3">
         <i class="bi bi-plus-circle me-1"></i> Add Premium Book
     </a>
-</div>
+}
 
 <div class="card shadow-sm">
     <div class="card-body">
         @if (Model == null || !Model.Any())
         {
-            <div class="alert alert-info mb-0">No premium books added yet.</div>
+            <div class="alert alert-info mb-0">No premium books found.</div>
         }
         else
         {
             <div class="table-responsive">
-                <table class="table table-striped mb-0">
+                <table class="table table-striped align-middle mb-0">
                     <thead>
                         <tr>
                             <th>Title</th>
@@ -32,6 +58,7 @@
                             <th class="text-end">Action</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         @foreach (var b in Model)
                         {
@@ -41,15 +68,37 @@
                                 <td>@b.Category</td>
                                 <td>@b.TotalCopies</td>
                                 <td>@b.AvailableCopies</td>
+
                                 <td class="text-end">
-                                    <form asp-controller="PremiumBooks" asp-action="Remove" method="post" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@b.Id" />
-                                        <button type="submit" class="btn btn-outline-danger btn-sm"
-                                                onclick="return confirm('Remove this book from Premium Collection?');">
-                                            <i class="bi bi-x-circle me-1"></i> Remove
-                                        </button>
-                                    </form>
+
+                                    <!-- ✅ Edit → Admin + Manager + Librarian -->
+                                    @if (canAddOrEdit)
+                                    {
+                                        <a asp-controller="PremiumBooks"
+                                           asp-action="Edit"
+                                           asp-route-id="@b.Id"
+                                           class="btn btn-warning btn-sm me-1">
+                                            <i class="bi bi-pencil-square"></i> Edit
+                                        </a>
+                                    }
+
+                                    <!-- ❌ Remove → ONLY Admin/Administrator -->
+                                    @if (isAdmin)
+                                    {
+                                        <form asp-controller="PremiumBooks"
+                                              asp-action="Remove"
+                                              asp-route-id="@b.Id"
+                                              method="post"
+                                              class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit"
+                                                    class="btn btn-outline-danger btn-sm"
+                                                    onclick="return confirm('Are you sure?')">
+                                                <i class="bi bi-x-circle"></i> Remove
+                                            </button>
+                                        </form>
+                                    }
+
                                 </td>
                             </tr>
                         }
