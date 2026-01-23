@@ -18,6 +18,9 @@ namespace LibraryManagementSystem.Controllers
         // ✅ keep same key name as BookApplicationController uses
         private const string StudentCardSessionKey = "StudentIdCardNo";
 
+        // ✅ New: separate key for storing barcode (so we don't mix "student card no" with "barcode")
+        private const string PremiumBarcodeSessionKey = "PremiumBarcode";
+
         public PremiumController(
             IPremiumAccessService premiumService,
             ISignInHelper signInHelper,
@@ -46,24 +49,75 @@ namespace LibraryManagementSystem.Controllers
 
             if (studentId > 0)
             {
-                // ✅ session unlock
+                // ✅ 1) Must unlock using barcode (session unlock)
                 var unlocked = HttpContext.Session.GetString(PremiumHandler.PremiumSessionKey) == "1";
 
-                // ✅ DB purchased membership unlock
+                // ✅ 2) Must have ACTIVE membership in DB (paid + not expired)
+                // IMPORTANT: service must return true only when Active & not expired
                 var purchased = await _premiumService.HasPurchasedMembershipAsync(studentId, ct);
 
-                canApplyPremium = unlocked || purchased;
+                // ✅ YOUR RULE: Apply only if BOTH are true
+                canApplyPremium = unlocked && purchased;
 
-                // ✅ If purchased but session key not set, keep UI consistent (optional but helpful)
-                if (purchased && !unlocked)
-                {
-                    HttpContext.Session.SetString(PremiumHandler.PremiumSessionKey, "1");
-                }
+                // ❌ REMOVED AUTO-SESSION SET (we keep logic, but we must NOT unlock session automatically)
+                // because you said barcode unlock is required after buying membership.
+                // if (purchased && !unlocked)
+                // {
+                //     HttpContext.Session.SetString(PremiumHandler.PremiumSessionKey, "1");
+                // }
             }
 
             ViewBag.CanApplyPremium = canApplyPremium;
 
             return View(premiumBooks);
+        }
+
+        // ✅ Premium Membership purchase page (student will buy online)
+        // This does NOT remove barcode unlock. It is an additional feature.
+        [HttpGet]
+        public async Task<IActionResult> Membership(CancellationToken ct)
+        {
+            ViewData["Title"] = "Premium Membership";
+            ViewData["ActivePage"] = "PremiumMembership";
+
+            var studentId = _signInHelper.UserId ?? 0;
+            if (studentId <= 0) return Forbid();
+
+            // ✅ Keep your existing logic (do not delete)
+            var hasMembership = await _premiumService.HasPurchasedMembershipAsync(studentId, ct);
+
+            // ✅ Improve UI accuracy using DB fields (Active + not expired)
+            var activeMembership = await _context.PremiumMemberships
+                .AsNoTracking()
+                .Where(x => x.StudentId == studentId
+                            && x.Status == "Active"
+                            && x.EndDate != null
+                            && x.EndDate.Value.Date >= DateTime.Today)
+                .OrderByDescending(x => x.EndDate)
+                .FirstOrDefaultAsync(ct);
+
+            bool hasActiveMembership = activeMembership != null;
+            ViewBag.HasMembership = hasActiveMembership || hasMembership;
+
+            // ✅ Provide EndDate for the "Valid until" badge in Membership.cshtml
+            ViewBag.EndDate = activeMembership?.EndDate;
+
+            // ❌ DO NOT auto-unlock premium session here
+            // because your rule says student must unlock with barcode after buying membership.
+            // (We keep this comment so you see the reason clearly.)
+
+            return View();
+        }
+
+        // ✅ Student clicks buy -> we redirect to PaymentController flow
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult BuyMembership(int days = 30)
+        {
+            var studentId = _signInHelper.UserId ?? 0;
+            if (studentId <= 0) return Forbid();
+
+            return RedirectToAction("MembershipCheckout", "Payment", new { days });
         }
 
         [HttpGet]
@@ -97,8 +151,9 @@ namespace LibraryManagementSystem.Controllers
             // ✅ set session unlock (IMPORTANT)
             HttpContext.Session.SetString(PremiumHandler.PremiumSessionKey, "1");
 
-            // ✅ ALSO store barcode/card no so StudentIdCardNo never becomes NULL in BookApplication
+            // ✅ Keep your existing logic (don't delete):
             HttpContext.Session.SetString(StudentCardSessionKey, barcode.Trim());
+            HttpContext.Session.SetString(PremiumBarcodeSessionKey, barcode.Trim());
 
             TempData["Success"] = "Premium section unlocked successfully!";
             return RedirectToAction(nameof(Index));
@@ -111,6 +166,7 @@ namespace LibraryManagementSystem.Controllers
             // ✅ remove both
             HttpContext.Session.Remove(PremiumHandler.PremiumSessionKey);
             HttpContext.Session.Remove(StudentCardSessionKey);
+            HttpContext.Session.Remove(PremiumBarcodeSessionKey);
 
             TempData["Success"] = "Premium section locked.";
             return RedirectToAction(nameof(Unlock));

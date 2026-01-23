@@ -1,0 +1,174 @@
+﻿@{
+    ViewData["Title"] = "Premium Membership";
+
+    bool hasMembership = false;
+    if (ViewBag.HasMembership != null)
+    {
+        bool.TryParse(ViewBag.HasMembership.ToString(), out hasMembership);
+    }
+
+    DateTime? membershipEndDate = null;
+    if (ViewBag.EndDate != null)
+    {
+        DateTime parsedEnd;
+        if (DateTime.TryParse(ViewBag.EndDate.ToString(), out parsedEnd))
+        {
+            membershipEndDate = parsedEnd;
+        }
+    }
+}
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-primary mb-1">Premium Membership</h2>
+            <div class="text-muted">
+                Buy membership online and unlock premium access instantly.
+            </div>
+        </div>
+    </div>
+
+    @if (hasMembership)
+    {
+        <div class="alert alert-success">
+            🎉 <strong>You are already a Premium Member!</strong><br />
+            You can access all premium books without restrictions.
+
+            @if (membershipEndDate != null)
+            {
+                <div class="mt-2">
+                    <span class="badge bg-success">
+                        Valid until: @membershipEndDate.Value.ToString("dd MMM yyyy")
+                    </span>
+                </div>
+            }
+        </div>
+
+        <a asp-controller="Premium" asp-action="Index" class="btn btn-primary">
+            Go to Premium Collection
+        </a>
+    }
+    else
+    {
+        <div class="row">
+            <!-- ONLINE MEMBERSHIP -->
+            <div class="col-md-6">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h4 class="fw-bold mb-2">Premium Membership Plan</h4>
+
+                        <ul class="mt-3 mb-4">
+                            <li>🔓 Unlock all premium books</li>
+                            <li>📚 No barcode required</li>
+                            <li>💳 Online payment via <strong>SSLCommerz</strong></li>
+                            <li>⚡ Premium unlocks immediately after payment</li>
+                        </ul>
+
+                        <div class="border rounded p-3 bg-light">
+                            <div class="fw-bold mb-2">Choose duration:</div>
+
+                            <!-- ✅ Selection UI -->
+                            <div class="mt-3">
+                                <h6 class="fw-semibold mb-2">Membership Duration</h6>
+
+                                <div class="alert alert-info mb-3">
+                                    <i class="bi bi-calendar-check me-1"></i>
+                                    Premium Membership is valid for <strong>30 days</strong>.
+                                </div>
+
+                                <h5 class="mb-3">
+                                    Price: <span class="text-success fw-bold">৳ 100</span>
+                                </h5>
+
+                                <a asp-controller="Payment"
+                                   asp-action="MembershipCheckout"
+                                   asp-route-days="30"
+                                   class="btn btn-success btn-lg w-100">
+                                    Buy Membership (30 Days)
+                                </a>
+
+                                <div class="text-muted small mt-2 text-center">
+                                    You will be redirected to the SSLCommerz payment gateway.
+                                </div>
+                            </div>
+
+
+                            <div class="text-muted small mt-2">
+                                You will be redirected to the SSLCommerz payment gateway.
+                            </div>
+                        </div>
+
+                       
+
+                        <!-- ✅ One Buy button that uses selected days -->
+                       
+
+                        <div class="text-muted mt-3 small">
+                            After successful payment, your membership will be saved automatically
+                            and premium access will unlock instantly.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BARCODE UNLOCK -->
+            <div class="col-md-6">
+                <div class="card border-info shadow-sm">
+                    <div class="card-body">
+                        <h5 class="fw-bold text-info">Alternative Access</h5>
+                        <p class="mb-3">
+                            If you don’t want to pay online, you can unlock premium access
+                            using a barcode provided by the librarian.
+                        </p>
+
+                        <a asp-controller="Premium"
+                           asp-action="Unlock"
+                           class="btn btn-outline-primary">
+                            Unlock with Barcode
+                        </a>
+
+                        <div class="text-muted mt-3 small">
+                            This uses your existing barcode unlock system.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @section Scripts {
+            <script>
+                (function () {
+                    const priceText = document.getElementById("priceText");
+                    const buyBtn = document.getElementById("buyBtn");
+
+                    function updateUI(days) {
+                        // Update price based on your PaymentController logic
+                        let price = 300;
+                        if (days === 7) price = 100;
+                        else if (days === 15) price = 200;
+
+                        priceText.textContent = `৳ ${price}`;
+
+                        // Update button text + href (keep MVC tag helper result, just replace query)
+                        buyBtn.textContent = `Buy Membership Now (${days} Days)`;
+
+                        // Replace any existing days= in the URL (safe)
+                        const url = new URL(buyBtn.href);
+                        url.searchParams.set("days", days);
+                        buyBtn.href = url.toString();
+                    }
+
+                    document.querySelectorAll('input[name="days"]').forEach(r => {
+                        r.addEventListener("change", function () {
+                            updateUI(parseInt(this.value));
+                        });
+                    });
+
+                    // Init with default checked (30)
+                    updateUI(30);
+                })();
+            </script>
+        }
+    }
+</div>

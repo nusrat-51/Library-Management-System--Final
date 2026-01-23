@@ -34,38 +34,38 @@ public class ApplicationDbContext : IdentityDbContext<
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        
+
         base.OnModelCreating(modelBuilder);
 
-        
+
         modelBuilder.Entity<Book>()
             .HasOne(b => b.bookCategory)
             .WithMany(c => c.Books)
             .HasForeignKey(b => b.CategoryId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        
+
         modelBuilder.Entity<BookApplication>()
             .HasOne(ba => ba.Book)
             .WithMany()
             .HasForeignKey(ba => ba.BookId)
-            
+
             .OnDelete(DeleteBehavior.Cascade);
 
-       
+
         modelBuilder.Entity<FinePayment>()
             .HasOne(fp => fp.BookApplication)
             .WithMany()
             .HasForeignKey(fp => fp.BookApplicationId)
-           
+
             .OnDelete(DeleteBehavior.Cascade);
 
-        
+
         modelBuilder.Entity<FinePayment>()
             .HasIndex(fp => fp.TranId)
             .IsUnique();
 
-        
+
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
 

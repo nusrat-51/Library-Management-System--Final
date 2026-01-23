@@ -227,7 +227,7 @@ namespace LibraryManagementSystem.Migrations
                             Id = 1L,
                             AccessFailedCount = 0,
                             Address = "",
-                            ConcurrencyStamp = "d389d293-3612-4af7-8e2e-ba106687c697",
+                            ConcurrencyStamp = "86f60621-7160-4ece-ac85-cb6cb4d7ce90",
                             CreatedBy = 0L,
                             CreatedDate = new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "admin@localhost.com",
@@ -236,11 +236,11 @@ namespace LibraryManagementSystem.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "ADMIN@LOCALHOST.COM",
                             NormalizedUserName = "ADMIN@LOCALHOST.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEAnS3I3vwGWqO/Pz3LNiyvLaAm2YAHTHunCxuIsZtyhUtgXcOuT5rWd0t/Gkx4cigQ==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEMgBQQ4IE6rfpHBODu8Oyn/f7gx7kbGJRKVfMVgqmwLmThYvuVKvP7kYKrERp+UEzw==",
                             Phone = "",
                             PhoneNumberConfirmed = false,
                             RegisterDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            SecurityStamp = "ad67bf08-0273-4c40-911d-ded1d22280f7",
+                            SecurityStamp = "94f0ba9f-32d8-41f1-b651-b9823d5cd967",
                             TwoFactorEnabled = false,
                             UserName = "admin@localhost.com"
                         },
@@ -249,7 +249,7 @@ namespace LibraryManagementSystem.Migrations
                             Id = 2L,
                             AccessFailedCount = 0,
                             Address = "",
-                            ConcurrencyStamp = "12249e99-6c06-480b-8e1c-e2d9adc77ec4",
+                            ConcurrencyStamp = "630826c1-9bcd-4a26-8857-c27abfe7286d",
                             CreatedBy = 0L,
                             CreatedDate = new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "employee@localhost.com",
@@ -258,11 +258,11 @@ namespace LibraryManagementSystem.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "EMPLOYEE@LOCALHOST.COM",
                             NormalizedUserName = "EMPLOYEE@LOCALHOST.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEA1rhM8s3tWrWNwHf04r9vn27wLZx/r6J1iaKgLbGDnWTmL2Ywaxe4nZw5Brbhduig==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEHGFRCWA9awzyuYfFKH4ltFvRcDq6sacTqwOGiIyBsVKF7uJ9w0M7D9ueSnkKMjPWg==",
                             Phone = "",
                             PhoneNumberConfirmed = false,
                             RegisterDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            SecurityStamp = "03abecec-4163-4ac5-a946-4c6ec3dccbfe",
+                            SecurityStamp = "1513efee-e86d-45df-a975-7136d6eb82d9",
                             TwoFactorEnabled = false,
                             UserName = "employee@localhost.com"
                         },
@@ -271,7 +271,7 @@ namespace LibraryManagementSystem.Migrations
                             Id = 3L,
                             AccessFailedCount = 0,
                             Address = "",
-                            ConcurrencyStamp = "efc393bd-648a-4e13-9749-b2ae0ee46196",
+                            ConcurrencyStamp = "7080f0d0-0133-4507-aa4b-ee5cd47c9c11",
                             CreatedBy = 0L,
                             CreatedDate = new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "Manager@localhost.com",
@@ -280,11 +280,11 @@ namespace LibraryManagementSystem.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "Manager@LOCALHOST.COM",
                             NormalizedUserName = "Manager@LOCALHOST.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEDYDIT8p2vl+fGpDEzwq3f6IvS02zMDt6hwDgaRNSyGaJbbD1Lp53AhMVd6G0GLDrA==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEK6C2qxK7qVQ4/ZSjQRu7yEHqMQdcm1+wS87gBqqzIhSwvOKO9sKkE+Aw7aECsA1bw==",
                             Phone = "",
                             PhoneNumberConfirmed = false,
                             RegisterDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            SecurityStamp = "f15599fb-1908-4903-b0bb-96e9ae2c7b5a",
+                            SecurityStamp = "a2903cfc-2bf9-4454-b828-2b31d6826a38",
                             TwoFactorEnabled = false,
                             UserName = "Manager@localhost.com"
                         });
@@ -448,6 +448,9 @@ namespace LibraryManagementSystem.Migrations
                     b.Property<decimal>("FineAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<bool>("IsFinePaid")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("IssueDate")
                         .HasColumnType("datetime2");
 
@@ -597,6 +600,9 @@ namespace LibraryManagementSystem.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("BarcodeHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -604,11 +610,37 @@ namespace LibraryManagementSystem.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("DurationDays")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ExpireAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("Expiry")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Gateway")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsPurchased")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("PurchasedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("StudentEmail")
                         .IsRequired()
@@ -618,6 +650,14 @@ namespace LibraryManagementSystem.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<string>("StudentName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TranId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ValId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

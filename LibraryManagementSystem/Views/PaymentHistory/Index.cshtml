@@ -1,0 +1,116 @@
+﻿@using LibraryManagementSystem.Models
+
+@{
+    ViewData["Title"] = "Payment History";
+
+    var finePayments = ViewBag.FinePayments as List<FinePayment> ?? new List<FinePayment>();
+    var memberships = ViewBag.Memberships as List<PremiumMembership> ?? new List<PremiumMembership>();
+}
+
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold mb-0">Payment History</h2>
+    </div>
+
+    <!-- ===================== Fine Payments ===================== -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-cash-coin me-2"></i> Fine Payment History
+            </h5>
+            <div class="text-muted small">Shows which student paid via SSLCommerz or Cash.</div>
+        </div>
+
+        <div class="card-body">
+            @if (!finePayments.Any())
+            {
+                <div class="alert alert-info mb-0">No fine payments found.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Student Email</th>
+                                <th>Amount</th>
+                                <th>Gateway</th>
+                                <th>Status</th>
+                                <th>Paid At</th>
+                                <th>TranId</th>
+                                <th>BookAppId</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var x in finePayments)
+                            {
+                                <tr>
+                                    <td>@x.StudentEmail</td>
+                                    <td>৳ @x.Amount</td>
+                                    <td>@x.Gateway</td>
+                                    <td>@x.Status</td>
+                                    <td>@(x.PaidAt?.ToString("dd MMM yyyy hh:mm tt") ?? "-")</td>
+                                    <td>@x.TranId</td>
+                                    <td>@x.BookApplicationId</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- ===================== Membership Payments ===================== -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-star-fill me-2 text-warning"></i> Premium Membership Payment History
+            </h5>
+            <div class="text-muted small">Shows online membership purchases and cash/barcode purchases.</div>
+        </div>
+
+        <div class="card-body">
+            @if (!memberships.Any())
+            {
+                <div class="alert alert-info mb-0">No membership purchases found.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Student Email</th>
+                                <th>Amount</th>
+                                <th>Gateway</th>
+                                <th>Status</th>
+                                <th>Paid At</th>
+                                <th>Duration</th>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th>TranId</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var x in memberships)
+                            {
+                                <tr>
+                                    <td>@x.StudentEmail</td>
+                                    <td>৳ @x.Amount</td>
+                                    <td>@x.Gateway</td>
+                                    <td>@x.Status</td>
+                                    <td>@(x.PaidAt?.ToString("dd MMM yyyy hh:mm tt") ?? x.PurchasedAt?.ToString("dd MMM yyyy hh:mm tt") ?? "-")</td>
+                                    <td>@x.DurationDays days</td>
+                                    <td>@(x.StartDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                                    <td>@(x.EndDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                                    <td>@x.TranId</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,88 @@
+﻿@{
+    ViewData["Title"] = "Contact Us";
+}
+
+<div class="container py-5">
+
+    <!-- Top Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light rounded px-3 mb-4">
+        <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">
+            Library Management System
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#contactNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="contactNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Home" asp-action="Index">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" asp-controller="Home" asp-action="Contact">Contact Us</a>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-outline-primary ms-lg-3" asp-controller="Account" asp-action="Login">
+                        Login
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-primary ms-lg-2" asp-controller="Account" asp-action="Register">
+                        Register
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Contact Card -->
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+
+                    <h2 class="fw-bold mb-3">Contact Us</h2>
+                    <p class="text-muted mb-4">
+                        For any queries related to book borrowing, fines, premium access, or system usage,
+                        please contact the library administration.
+                    </p>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <h6 class="fw-bold">📧 Email</h6>
+                            <p class="mb-0">library@example.com</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6 class="fw-bold">📞 Phone</h6>
+                            <p class="mb-0">+880 1712043884</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6 class="fw-bold">📍 Address</h6>
+                        <p class="mb-0">
+                            University Library <br />
+                            IUBAT <br />
+                            Dhaka,Bangladesh
+                        </p>
+                    </div>
+
+                    <div class="mt-4 d-flex flex-wrap gap-2">
+                        <a class="btn btn-primary" asp-controller="Account" asp-action="Login">
+                            Login
+                        </a>
+                        <a class="btn btn-outline-secondary" asp-controller="Account" asp-action="Register">
+                            Create Account
+                        </a>
+                        <a class="btn btn-link" asp-controller="Home" asp-action="Index">
+                            ← Back to Home
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

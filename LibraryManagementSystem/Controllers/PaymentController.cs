@@ -1,8 +1,11 @@
 ﻿using LibraryManagementSystem.Data;
 using LibraryManagementSystem.Models;
+using LibraryManagementSystem.Service;
+using LibraryManagementSystem.Helper; // ✅ needed for PremiumHandler
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims; // ✅ needed for ClaimTypes
 using System.Text.Json;
 
 namespace LibraryManagementSystem.Controllers
@@ -20,9 +23,10 @@ namespace LibraryManagementSystem.Controllers
             _config = config;
         }
 
-        // -------------------------------
-        //  create FinePayment record per application
-        // -------------------------------
+        // ============================================================
+        // FINE PAYMENT (EXISTING LOGIC - NOT DELETED)
+        // ============================================================
+
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -33,7 +37,6 @@ namespace LibraryManagementSystem.Controllers
 
             if (app == null) return NotFound();
 
-            //  calculate fine from ReturnDate 
             decimal finePerDay = 10;
 
             var today = DateTime.Today;
@@ -55,14 +58,12 @@ namespace LibraryManagementSystem.Controllers
                 return RedirectToAction("Index", "BookApplication");
             }
 
-            // already paid//
             var alreadyPaid = await _context.FinePayments
                 .FirstOrDefaultAsync(p => p.BookApplicationId == bookApplicationId && p.Status == "Paid", cancellationToken);
 
             if (alreadyPaid != null)
                 return RedirectToAction("Result", new { tran_id = alreadyPaid.TranId });
 
-            //  unpaid payment, reuse it//
             var existing = await _context.FinePayments
                 .FirstOrDefaultAsync(p => p.BookApplicationId == bookApplicationId && p.Status == "Initiated", cancellationToken);
 
@@ -89,9 +90,6 @@ namespace LibraryManagementSystem.Controllers
             return RedirectToAction("StartGateway", new { tranId });
         }
 
-        // -------------------------------
-        // CASH PAYMENT//
-        // -------------------------------
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -122,7 +120,6 @@ namespace LibraryManagementSystem.Controllers
                 return RedirectToAction("Index", "BookApplication");
             }
 
-            //  paid, show receipt//
             var alreadyPaid = await _context.FinePayments
                 .FirstOrDefaultAsync(p => p.BookApplicationId == bookApplicationId && p.Status == "Paid", cancellationToken);
 
@@ -147,7 +144,6 @@ namespace LibraryManagementSystem.Controllers
 
             _context.FinePayments.Add(payment);
 
-            // "fine cleared"//
             app.FineAmount = 0;
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -155,9 +151,6 @@ namespace LibraryManagementSystem.Controllers
             return RedirectToAction("Receipt", new { tran_id = tranId });
         }
 
-        // -------------------------------
-        // Cash receipt page
-        // -------------------------------
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> Receipt(string tran_id, CancellationToken cancellationToken)
@@ -170,9 +163,6 @@ namespace LibraryManagementSystem.Controllers
             return View("CashReceipt", payment);
         }
 
-        // -------------------------------
-        // Create session and redirect user to SSLCOMMERZ Hosted Page
-        // -------------------------------
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> StartGateway(string tranId, CancellationToken cancellationToken)
@@ -183,80 +173,24 @@ namespace LibraryManagementSystem.Controllers
             if (payment.Status == "Paid")
                 return RedirectToAction("Result", new { tran_id = payment.TranId });
 
-            var storeId = _config["SSLCOMMERZ:StoreId"];
-            var storePass = _config["SSLCOMMERZ:StorePassword"];
-            var sessionUrl = _config["SSLCOMMERZ:SandboxSessionUrl"];
-            var currency = _config["SSLCOMMERZ:Currency"] ?? "BDT";
+            var gatewayUrlOrError = await CreateSslCommerzSessionAsync(
+                totalAmount: payment.Amount,
+                tranId: payment.TranId,
+                productName: "Library Fine Payment",
+                productCategory: "Fine",
+                successPath: "/Payment/Success",
+                failPath: "/Payment/Fail",
+                cancelPath: "/Payment/Cancel",
+                ipnPath: "/Payment/Ipn",
+                cancellationToken: cancellationToken
+            );
 
-            //  This MUST be public URL (ngrok) so SSLCommerz can redirect back
-            var publicBaseUrl = _config["SSLCOMMERZ:PublicBaseUrl"];
-            if (string.IsNullOrWhiteSpace(publicBaseUrl))
-                return Content("PublicBaseUrl missing in appsettings.json (SSLCOMMERZ:PublicBaseUrl)");
+            if (gatewayUrlOrError.StartsWith("ERROR::"))
+                return Content(gatewayUrlOrError.Replace("ERROR::", ""));
 
-            // cleanup (important)
-            publicBaseUrl = publicBaseUrl.Split("->")[0].Trim();
-            publicBaseUrl = publicBaseUrl.TrimEnd('/');
-
-            var successUrl = $"{publicBaseUrl}/Payment/Success";
-            var failUrl = $"{publicBaseUrl}/Payment/Fail";
-            var cancelUrl = $"{publicBaseUrl}/Payment/Cancel";
-            var ipnUrl = $"{publicBaseUrl}/Payment/Ipn";
-
-            var postData = new Dictionary<string, string>
-            {
-                ["store_id"] = storeId ?? "",
-                ["store_passwd"] = storePass ?? "",
-                ["total_amount"] = payment.Amount.ToString("0.00"),
-                ["currency"] = currency,
-                ["tran_id"] = payment.TranId,
-
-                ["success_url"] = successUrl,
-                ["fail_url"] = failUrl,
-                ["cancel_url"] = cancelUrl,
-                ["ipn_url"] = ipnUrl,
-
-                ["cus_name"] = payment.StudentEmail,
-                ["cus_email"] = payment.StudentEmail,
-                ["cus_add1"] = "Dhaka",
-                ["cus_city"] = "Dhaka",
-                ["cus_country"] = "Bangladesh",
-                ["cus_phone"] = "01700000000",
-
-                ["shipping_method"] = "NO",
-                ["product_name"] = "Library Fine Payment",
-                ["product_category"] = "Fine",
-                ["product_profile"] = "general"
-            };
-
-            if (string.IsNullOrWhiteSpace(sessionUrl) || !Uri.IsWellFormedUriString(sessionUrl, UriKind.Absolute))
-                return Content("Session URL invalid. Check SSLCOMMERZ:SandboxSessionUrl in appsettings.json");
-
-            var client = _httpClientFactory.CreateClient();
-
-            var response = await client.PostAsync(sessionUrl, new FormUrlEncodedContent(postData), cancellationToken);
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            //  IMPORTANT: show SSLCommerz errors clearly
-            if (!response.IsSuccessStatusCode)
-            {
-                return Content($"SSLCOMMERZ HTTP ERROR: {(int)response.StatusCode}\n\n{json}");
-            }
-
-            using var doc = JsonDocument.Parse(json);
-
-            if (!doc.RootElement.TryGetProperty("GatewayPageURL", out var gatewayUrlEl))
-                return Content("SSLCOMMERZ session failed: " + json);
-
-            var gatewayUrl = gatewayUrlEl.GetString();
-            if (string.IsNullOrWhiteSpace(gatewayUrl))
-                return Content("SSLCOMMERZ GatewayPageURL missing: " + json);
-
-            return Redirect(gatewayUrl);
+            return Redirect(gatewayUrlOrError);
         }
 
-        // -------------------------------
-        // CALLBACKS (must be public - ngrok)
-        // -------------------------------
         [HttpPost, HttpGet]
         public async Task<IActionResult> Success(string tran_id, string val_id, CancellationToken cancellationToken)
         {
@@ -322,9 +256,6 @@ namespace LibraryManagementSystem.Controllers
             return Redirect($"{localBaseUrl}/Payment/Result?tran_id={tran_id}");
         }
 
-        // -------------------------------
-        // RESULT PAGE
-        // -------------------------------
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> Result(string tran_id, CancellationToken cancellationToken)
@@ -343,6 +274,280 @@ namespace LibraryManagementSystem.Controllers
         public IActionResult Ipn()
         {
             return Ok();
+        }
+
+        // ============================================================
+        // PREMIUM MEMBERSHIP PAYMENT (NEW - ADDED, DOES NOT REMOVE ANYTHING)
+        // ============================================================
+
+        [Authorize(Roles = "Student")]
+        [HttpGet]
+        public async Task<IActionResult> MembershipCheckout(int days = 30, CancellationToken cancellationToken = default)
+        {
+            decimal amount = days switch
+            {
+                7 => 100m,
+                15 => 200m,
+                _ => 300m
+            };
+
+            var studentEmail =
+                User.FindFirstValue(ClaimTypes.Email) ??
+                User?.Identity?.Name ??
+                "";
+
+            long studentId = 0;
+
+            var sidStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrWhiteSpace(sidStr))
+                long.TryParse(sidStr, out studentId);
+
+            if (studentId <= 0)
+            {
+                var altSid = User.FindFirstValue("StudentId") ?? User.FindFirstValue("sid");
+                if (!string.IsNullOrWhiteSpace(altSid))
+                    long.TryParse(altSid, out studentId);
+            }
+
+            if (studentId <= 0 && !string.IsNullOrWhiteSpace(studentEmail))
+            {
+                var anyApp = await _context.bookApplications
+                    .AsNoTracking()
+                    .Where(x => x.StudentEmail == studentEmail)
+                    .OrderByDescending(x => x.Id)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (anyApp != null)
+                    studentId = anyApp.StudentId;
+            }
+
+            if (studentId <= 0)
+                return Content("StudentId not found in claims. Make sure you are logged in as Student.");
+
+            var existingActive = await _context.PremiumMemberships
+                .AsNoTracking()
+                .Where(x =>
+                    x.StudentId == studentId &&
+                    x.Status == "Active" &&
+                    x.EndDate != null &&
+                    x.EndDate.Value.Date >= DateTime.Today)
+                .OrderByDescending(x => x.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (existingActive != null)
+            {
+                return RedirectToAction("Index", "Premium");
+            }
+
+            var tranId = Guid.NewGuid().ToString("N");
+
+            var membership = new PremiumMembership
+            {
+                StudentId = studentId,
+                StudentEmail = studentEmail,
+                Amount = amount,
+                TranId = tranId,
+                Status = "Initiated",
+                Gateway = "SSLCommerz",
+                CreatedAt = DateTime.Now,
+                DurationDays = days
+            };
+
+            _context.PremiumMemberships.Add(membership);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            var gatewayUrlOrError = await CreateSslCommerzSessionAsync(
+                totalAmount: amount,
+                tranId: tranId,
+                productName: $"Premium Membership ({days} days)",
+                productCategory: "Membership",
+                successPath: "/Payment/MembershipSuccess",
+                failPath: "/Payment/MembershipFail",
+                cancelPath: "/Payment/MembershipCancel",
+                ipnPath: "/Payment/Ipn",
+                cancellationToken: cancellationToken
+            );
+
+            if (gatewayUrlOrError.StartsWith("ERROR::"))
+                return Content(gatewayUrlOrError.Replace("ERROR::", ""));
+
+            return Redirect(gatewayUrlOrError);
+        }
+
+        [HttpPost, HttpGet]
+        public async Task<IActionResult> MembershipSuccess(string tran_id, string val_id, CancellationToken cancellationToken)
+        {
+            var membership = await _context.PremiumMemberships
+                .FirstOrDefaultAsync(p => p.TranId == tran_id, cancellationToken);
+
+            if (membership == null) return NotFound();
+
+            membership.ValId = val_id;
+
+            var storeId = _config["SSLCOMMERZ:StoreId"];
+            var storePass = _config["SSLCOMMERZ:StorePassword"];
+            var validationUrl = _config["SSLCOMMERZ:SandboxValidationUrl"];
+
+            if (!string.IsNullOrWhiteSpace(validationUrl))
+            {
+                var url = $"{validationUrl}?val_id={val_id}&store_id={storeId}&store_passwd={storePass}&format=json";
+                var client = _httpClientFactory.CreateClient();
+                await client.GetAsync(url, cancellationToken);
+            }
+
+            membership.Status = "Active";
+            membership.PaidAt = DateTime.Now;
+            membership.StartDate = DateTime.Today;
+
+            var days = membership.DurationDays <= 0 ? 30 : membership.DurationDays;
+            membership.EndDate = DateTime.Today.AddDays(days);
+
+            membership.IsPurchased = true;
+            membership.PurchasedAt = membership.PaidAt;
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            HttpContext.Session.SetString(PremiumHandler.PremiumSessionKey, "1");
+
+            var localBaseUrl = _config["SSLCOMMERZ:LocalBaseUrl"] ?? "http://localhost:5086";
+            localBaseUrl = localBaseUrl.Split("->")[0].Trim().TrimEnd('/');
+
+            return Redirect($"{localBaseUrl}/Payment/MembershipResult?tran_id={tran_id}");
+        }
+
+        [HttpPost, HttpGet]
+        public async Task<IActionResult> MembershipFail(string tran_id, CancellationToken cancellationToken)
+        {
+            var membership = await _context.PremiumMemberships
+                .FirstOrDefaultAsync(p => p.TranId == tran_id, cancellationToken);
+
+            if (membership != null)
+            {
+                membership.Status = "Failed";
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            var localBaseUrl = _config["SSLCOMMERZ:LocalBaseUrl"] ?? "http://localhost:5086";
+            localBaseUrl = localBaseUrl.Split("->")[0].Trim().TrimEnd('/');
+
+            return Redirect($"{localBaseUrl}/Payment/MembershipResult?tran_id={tran_id}");
+        }
+
+        [HttpPost, HttpGet]
+        public async Task<IActionResult> MembershipCancel(string tran_id, CancellationToken cancellationToken)
+        {
+            var membership = await _context.PremiumMemberships
+                .FirstOrDefaultAsync(p => p.TranId == tran_id, cancellationToken);
+
+            if (membership != null)
+            {
+                membership.Status = "Cancelled";
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            var localBaseUrl = _config["SSLCOMMERZ:LocalBaseUrl"] ?? "http://localhost:5086";
+            localBaseUrl = localBaseUrl.Split("->")[0].Trim().TrimEnd('/');
+
+            return Redirect($"{localBaseUrl}/Payment/MembershipResult?tran_id={tran_id}");
+        }
+
+        [Authorize(Roles = "Student")]
+        [HttpGet]
+        public async Task<IActionResult> MembershipResult(string tran_id, CancellationToken cancellationToken)
+        {
+            var membership = await _context.PremiumMemberships
+                .FirstOrDefaultAsync(p => p.TranId == tran_id, cancellationToken);
+
+            if (membership == null) return NotFound();
+
+            // ✅ FIX: read from your existing appsettings.json key: Premium:UnlockBarcode
+            ViewBag.PremiumBarcode = _config["Premium:UnlockBarcode"] ?? "1234";
+
+            if (membership.Status == "Active") return View("MembershipPaymentSuccess", membership);
+            if (membership.Status == "Failed") return View("MembershipPaymentFailed");
+            if (membership.Status == "Cancelled") return View("MembershipPaymentCancelled");
+
+            return View("MembershipPaymentFailed");
+        }
+
+        // ============================================================
+        // SHARED METHOD: CREATE SSLCommerz SESSION
+        // ============================================================
+        private async Task<string> CreateSslCommerzSessionAsync(
+            decimal totalAmount,
+            string tranId,
+            string productName,
+            string productCategory,
+            string successPath,
+            string failPath,
+            string cancelPath,
+            string ipnPath,
+            CancellationToken cancellationToken)
+        {
+            var storeId = _config["SSLCOMMERZ:StoreId"];
+            var storePass = _config["SSLCOMMERZ:StorePassword"];
+            var sessionUrl = _config["SSLCOMMERZ:SandboxSessionUrl"];
+            var currency = _config["SSLCOMMERZ:Currency"] ?? "BDT";
+
+            var publicBaseUrl = _config["SSLCOMMERZ:PublicBaseUrl"];
+            if (string.IsNullOrWhiteSpace(publicBaseUrl))
+                return "ERROR::PublicBaseUrl missing in appsettings.json (SSLCOMMERZ:PublicBaseUrl)";
+
+            publicBaseUrl = publicBaseUrl.Split("->")[0].Trim().TrimEnd('/');
+
+            var successUrl = $"{publicBaseUrl}{successPath}";
+            var failUrl = $"{publicBaseUrl}{failPath}";
+            var cancelUrl = $"{publicBaseUrl}{cancelPath}";
+            var ipnUrl = $"{publicBaseUrl}{ipnPath}";
+
+            var email = User?.Identity?.Name ?? "student@library.com";
+
+            var postData = new Dictionary<string, string>
+            {
+                ["store_id"] = storeId ?? "",
+                ["store_passwd"] = storePass ?? "",
+                ["total_amount"] = totalAmount.ToString("0.00"),
+                ["currency"] = currency,
+                ["tran_id"] = tranId,
+
+                ["success_url"] = successUrl,
+                ["fail_url"] = failUrl,
+                ["cancel_url"] = cancelUrl,
+                ["ipn_url"] = ipnUrl,
+
+                ["cus_name"] = email,
+                ["cus_email"] = email,
+                ["cus_add1"] = "Dhaka",
+                ["cus_city"] = "Dhaka",
+                ["cus_country"] = "Bangladesh",
+                ["cus_phone"] = "01700000000",
+
+                ["shipping_method"] = "NO",
+                ["product_name"] = productName,
+                ["product_category"] = productCategory,
+                ["product_profile"] = "general"
+            };
+
+            if (string.IsNullOrWhiteSpace(sessionUrl) || !Uri.IsWellFormedUriString(sessionUrl, UriKind.Absolute))
+                return "ERROR::Session URL invalid. Check SSLCOMMERZ:SandboxSessionUrl in appsettings.json";
+
+            var client = _httpClientFactory.CreateClient();
+            var response = await client.PostAsync(sessionUrl, new FormUrlEncodedContent(postData), cancellationToken);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+                return $"ERROR::SSLCOMMERZ HTTP ERROR: {(int)response.StatusCode}\n\n{json}";
+
+            using var doc = JsonDocument.Parse(json);
+
+            if (!doc.RootElement.TryGetProperty("GatewayPageURL", out var gatewayUrlEl))
+                return "ERROR::SSLCOMMERZ session failed: " + json;
+
+            var gatewayUrl = gatewayUrlEl.GetString();
+            if (string.IsNullOrWhiteSpace(gatewayUrl))
+                return "ERROR::SSLCOMMERZ GatewayPageURL missing: " + json;
+
+            return gatewayUrl;
         }
     }
 }

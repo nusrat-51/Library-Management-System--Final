@@ -1,0 +1,90 @@
+﻿@model IEnumerable<LibraryManagementSystem.Models.PremiumMembership>
+
+<div class="container py-4">
+    <h2 class="fw-bold mb-3">Premium Membership Purchase History</h2>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="alert alert-info">
+            No premium membership purchase history found.
+        </div>
+    }
+    else
+    {
+        <table class="table table-bordered table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Student</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>TranId</th>
+                    <th>ValId</th>
+                    <th>PaidAt</th>
+                    <th>Days</th>
+                    <th>Start</th>
+                    <th>End</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var x in Model)
+                {
+                    <tr>
+                        <td>
+                            @* ✅ FIX: PremiumMembership uses StudentEmail/StudentName/StudentId (not UserId) *@
+                            @if (!string.IsNullOrWhiteSpace(x.StudentEmail))
+                            {
+                                <div class="fw-semibold">@x.StudentEmail</div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(x.StudentName))
+                            {
+                                <div class="fw-semibold">@x.StudentName</div>
+                            }
+                            else
+                            {
+                                <div class="fw-semibold">Student ID: @x.StudentId</div>
+                            }
+
+                            @* optional sub info *@
+                            @if (!string.IsNullOrWhiteSpace(x.StudentName) && !string.IsNullOrWhiteSpace(x.StudentEmail))
+                            {
+                                <div class="text-muted small">@x.StudentName</div>
+                            }
+                        </td>
+
+                        <td>@x.Amount</td>
+                        <td>
+                            @* status badge *@
+                            @if (x.Status == "Active")
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else if (x.Status == "Initiated")
+                            {
+                                <span class="badge bg-warning text-dark">Initiated</span>
+                            }
+                            else if (x.Status == "Failed")
+                            {
+                                <span class="badge bg-danger">Failed</span>
+                            }
+                            else if (x.Status == "Cancelled")
+                            {
+                                <span class="badge bg-secondary">Cancelled</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-dark">@x.Status</span>
+                            }
+                        </td>
+
+                        <td>@x.TranId</td>
+                        <td>@(string.IsNullOrWhiteSpace(x.ValId) ? "-" : x.ValId)</td>
+                        <td>@(x.PaidAt?.ToString("dd MMM yyyy hh:mm tt") ?? "-")</td>
+                        <td>@x.DurationDays</td>
+                        <td>@(x.StartDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                        <td>@(x.EndDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

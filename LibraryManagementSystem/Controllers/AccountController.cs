@@ -23,7 +23,7 @@ namespace LibraryManagementSystem.Controllers
             _authService = authService;
         }
 
-        // ================= REGISTER =================
+        // REGISTER //
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Register()
@@ -56,7 +56,7 @@ namespace LibraryManagementSystem.Controllers
             return RedirectToAction("Index", "Dashboard");
         }
 
-        // ================= LOGIN =================
+        // ================= LOGIN =================//
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Login()
@@ -81,7 +81,7 @@ namespace LibraryManagementSystem.Controllers
             return View(model);
         }
 
-        // ================= LOGOUT =================
+        // ================= LOGOUT =================//
         [HttpPost]
         public async Task<IActionResult> Logout()
         {
@@ -89,7 +89,7 @@ namespace LibraryManagementSystem.Controllers
             return RedirectToAction("Login", "Account");
         }
 
-        // ================= ACCESS DENIED =================
+        // ================= ACCESS DENIED =================//
         [HttpGet]
         [AllowAnonymous]
         public IActionResult AccessDenied(string returnUrl = null)
@@ -98,7 +98,7 @@ namespace LibraryManagementSystem.Controllers
             return View();
         }
 
-        // ================= PROFILE =================
+        // ================= PROFILE =================//
         [Authorize]
         public async Task<IActionResult> Profile()
         {
@@ -107,7 +107,7 @@ namespace LibraryManagementSystem.Controllers
             return View(user);
         }
 
-        // ================= SETTINGS =================
+        // ================= SETTINGS =================//
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> Settings()
@@ -117,7 +117,7 @@ namespace LibraryManagementSystem.Controllers
             return View(user);
         }
 
-        // ================= CHANGE PASSWORD (FIXED) =================
+        // ================= CHANGE PASSWORD (FIXED) =================//
 
         // ✅ GET: /Account/ChangePassword
         [Authorize]

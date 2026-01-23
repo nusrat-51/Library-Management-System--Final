@@ -1,0 +1,45 @@
+﻿@model LibraryManagementSystem.Models.PremiumMembership
+@{
+    ViewData["Title"] = "Membership Payment Success";
+    var barcode = (ViewBag.PremiumBarcode?.ToString() ?? "1234");
+}
+
+<div class="container py-5">
+    <div class="card shadow-sm border-success">
+        <div class="card-body p-4">
+            <h2 class="fw-bold text-success mb-2">✅ Payment Successful!</h2>
+
+            <p class="text-muted mb-4">
+                Your premium membership has been activated successfully.
+            </p>
+
+            <div class="alert alert-success">
+                <div class="fw-bold mb-1">🔑 Your Premium Barcode:</div>
+                <div class="fw-bold" style="font-size: 30px; letter-spacing: 4px;">
+                    @barcode
+                </div>
+                <div class="small text-muted mt-2">
+                    Use this code to unlock Premium Collection.
+                </div>
+            </div>
+
+            <div class="border rounded p-3 bg-light mb-4">
+                <div class="fw-bold mb-1">Membership Details</div>
+                <div class="small text-muted">TranId: @Model.TranId</div>
+                <div class="small text-muted">Duration: @Model.DurationDays days</div>
+                <div class="small text-muted">Start: @(Model.StartDate?.ToString("dd MMM yyyy") ?? "-")</div>
+                <div class="small text-muted">End: @(Model.EndDate?.ToString("dd MMM yyyy") ?? "-")</div>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <a asp-controller="Premium" asp-action="Index" class="btn btn-primary">
+                    Back to Premium Collection
+                </a>
+
+                <a asp-controller="Premium" asp-action="Unlock" class="btn btn-outline-success">
+                    Unlock Premium Now
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

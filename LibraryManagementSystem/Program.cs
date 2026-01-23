@@ -45,21 +45,15 @@ builder.Services.AddIdentity<User, Role>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
+
+// 🔥 AUTH COOKIE — MUST BE NONE
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = "LibraryAuth";
     options.Cookie.HttpOnly = true;
 
-    if (builder.Environment.IsDevelopment())
-    {
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    }
-    else
-    {
-        options.Cookie.SameSite = SameSiteMode.None;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    }
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/AccessDenied";
@@ -73,31 +67,22 @@ builder.Services.AddTransient<ISignInHelper, SignInHelper>();
 
 builder.Services.AddHttpClient();
 
-// PREMIUM MEMBERSHIP + BARCODE UNLOCK (ADDED)
+// SESSION
 builder.Services.AddHttpContextAccessor();
-
-// ✅ Session services
 builder.Services.AddDistributedMemoryCache();
+
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromHours(12);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 
-    if (builder.Environment.IsDevelopment())
-    {
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    }
-    else
-    {
-        options.Cookie.SameSite = SameSiteMode.None;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    }
+    // 🔥 SESSION COOKIE — MUST BE NONE
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
 
 builder.Services.AddScoped<IPremiumAccessService, PremiumAccessService>();
-
 builder.Services.AddScoped<IAuthorizationHandler, PremiumHandler>();
 
 builder.Services.AddAuthorization(options =>
@@ -121,18 +106,13 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-// ✅ FIX: CookiePolicy should NOT override cookies (Session/Auth) to Lax forcibly
-// Keep your per-cookie SameSite settings from AddSession + ConfigureApplicationCookie
-app.UseCookiePolicy(new CookiePolicyOptions
-{
-    MinimumSameSitePolicy = SameSiteMode.Unspecified
-});
+// ❌ REMOVE CookiePolicy — এটা redirect ভাঙে
+// app.UseCookiePolicy();
 
 app.UseRouting();
 
-// ✅ Session must be AFTER Routing, BEFORE Authentication/Authorization
+// ⚠️ ORDER IS IMPORTANT
 app.UseSession();
-
 app.UseAuthentication();
 app.UseAuthorization();
 

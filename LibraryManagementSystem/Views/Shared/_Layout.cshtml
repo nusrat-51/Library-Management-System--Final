@@ -273,7 +273,7 @@
         </div>
     </nav>
 
-    <!-- ✅ Sidebar (keep logic, just HIDE Premium Membership for staff) -->
+    <!-- ✅ Sidebar -->
     <div class="sidebar" id="sidebar">
         <ul class="sidebar-menu">
 
@@ -294,12 +294,35 @@
                     </a>
                 </li>
 
+                @* ✅ Premium Collection should go to Index (list) not Unlock (barcode page) *@
                 <li>
-                    <a asp-controller="Premium" asp-action="Unlock"
+                    <a asp-controller="Premium" asp-action="Index"
                        class="@(ViewData["ActivePage"]?.ToString() == "Premium" ? "active" : "")">
                         <i class="bi bi-star"></i> Premium Collection
                     </a>
                 </li>
+
+                @* ✅ NEW: Premium Membership purchase page *@
+                <li>
+                    <a asp-controller="Premium" asp-action="Membership"
+                       class="@(ViewData["ActivePage"]?.ToString() == "PremiumMembership" ? "active" : "")">
+                        <i class="bi bi-star-fill"></i> Premium Membership
+                    </a>
+                </li>
+
+                @* ✅ Keep barcode unlock as alternative (your Membership.cshtml also links here) *@
+                <li>
+                    <a asp-controller="Premium" asp-action="Unlock"
+                       class="@(ViewData["ActivePage"]?.ToString() == "PremiumUnlock" ? "active" : "")">
+                        <i class="bi bi-upc-scan"></i> Unlock with Barcode
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/StudentPaymentHistory">
+                        <i class="bi bi-receipt"></i> Payment History
+                    </a>
+                </li>
+
             }
             else
             {
@@ -362,14 +385,28 @@
                         <i class="bi bi-gear"></i> Settings
                     </a>
                 </li>
+                <li>
+                    <a asp-controller="PaymentHistory" asp-action="Index"
+                       class="@(ViewData["ActivePage"]?.ToString() == "PaymentHistory" ? "active" : "")">
+                        <i class="bi bi-receipt"></i> Payment History
+                    </a>
+                </li>
 
-                @* ✅ DO NOT DELETE LOGIC: just disable showing it for staff *@
+
+                @* ✅ DO NOT DELETE LOGIC: kept your block exactly, but now supports BOTH staff pages safely *@
                 @if (false && isStaff)
                 {
                     <li>
                         <a asp-controller="Membership" asp-action="Index"
                            class="@(ViewData["ActivePage"]?.ToString() == "Membership" ? "active" : "")">
                             <i class="bi bi-upc-scan"></i> Premium Membership
+                        </a>
+                    </li>
+
+                    <li>
+                        <a asp-controller="Membership" asp-action="History"
+                           class="@(ViewData["ActivePage"]?.ToString() == "MembershipHistory" ? "active" : "")">
+                            <i class="bi bi-clock-history"></i> Premium Payment History
                         </a>
                     </li>
                 }

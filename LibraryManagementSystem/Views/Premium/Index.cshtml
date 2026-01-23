@@ -13,8 +13,16 @@
 {
     <div class="alert alert-warning">
         <i class="bi bi-lock-fill me-1"></i>
-        Premium books are visible, but you cannot apply unless your Premium Membership is unlocked.
-        <a asp-controller="Premium" asp-action="Unlock" class="ms-2 fw-semibold">Unlock now</a>
+        Premium books are visible, but you can apply only after:
+        <strong>1) Buying Premium Membership</strong> and <strong>2) Unlocking with Barcode</strong>.
+        <div class="mt-2 d-flex gap-2 flex-wrap">
+            <a asp-controller="Premium" asp-action="Membership" class="btn btn-sm btn-primary">
+                Buy Membership
+            </a>
+            <a asp-controller="Premium" asp-action="Unlock" class="btn btn-sm btn-outline-dark">
+                Unlock with Barcode
+            </a>
+        </div>
     </div>
 }
 
@@ -58,7 +66,6 @@
                                     }
                                     else if (canApplyPremium)
                                     {
-                                        @* ✅ Manual apply page (shows Applybook form) *@
                                         <a asp-controller="BookApplication"
                                            asp-action="Applybook"
                                            asp-route-id="@b.Id"
@@ -68,11 +75,10 @@
                                     }
                                     else
                                     {
-                                        @* ✅ Locked: user should go to Unlock page (NOT disabled link) *@
                                         <a asp-controller="Premium"
-                                           asp-action="Unlock"
+                                           asp-action="Membership"
                                            class="btn btn-outline-secondary btn-sm"
-                                           title="Unlock Premium to apply">
+                                           title="Buy membership then unlock to apply">
                                             <i class="bi bi-lock-fill me-1"></i> Apply (Locked)
                                         </a>
                                     }

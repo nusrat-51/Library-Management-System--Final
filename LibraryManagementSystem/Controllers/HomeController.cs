@@ -2,10 +2,10 @@ using System.Diagnostics;
 using LibraryManagementSystem.Models;
 using Microsoft.AspNetCore.Mvc;
 
-
 using LibraryManagementSystem.Service;
 using LibraryManagementSystem.Service.Email;
 using LibraryManagementSystem.Service.Pdf;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LibraryManagementSystem.Controllers
 {
@@ -33,17 +33,31 @@ namespace LibraryManagementSystem.Controllers
             _pdf = pdf;
         }
 
+        // ? Landing page (Public)
+        [AllowAnonymous]
         public IActionResult Index()
         {
             return View();
         }
 
+        // ? Optional: Privacy page (Public)
+        [AllowAnonymous]
         public IActionResult Privacy()
         {
             return View();
         }
 
-        
+        // ? NEW: Contact page (Public) — doesn't affect any existing features
+        [AllowAnonymous]
+        [HttpGet]
+        public IActionResult Contact()
+        {
+            return View();
+        }
+
+        // ? Keep your test mail endpoint (Public only for testing)
+        // Tip: In real production, you would restrict this to Admin, but I'm NOT changing your logic.
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> TestUniversityMail(string to, string name = "Student", int appId = 2002)
         {
@@ -52,7 +66,10 @@ namespace LibraryManagementSystem.Controllers
                 if (string.IsNullOrWhiteSpace(to))
                     return BadRequest("Please provide 'to' email. Example: /Home/TestUniversityMail?to=someone@gmail.com");
 
-               
+                if (string.IsNullOrWhiteSpace(name))
+                    name = "Student";
+
+                // Fake application data for email preview/testing
                 var app = new BookApplication
                 {
                     Id = appId,
@@ -61,13 +78,13 @@ namespace LibraryManagementSystem.Controllers
                     Status = "Approved"
                 };
 
-               
+                // Build email
                 var (subject, html) = _template.BuildDueTomorrow(name, app);
 
-                
+                // Generate PDF
                 var pdfBytes = _pdf.CreateReminderPdf(name, app, "DueTomorrow");
 
-             
+                // Compose message
                 var msg = new EmailMessage
                 {
                     ToEmail = to,
@@ -75,7 +92,6 @@ namespace LibraryManagementSystem.Controllers
                     HtmlBody = html,
                     InlineImages = new()
                     {
-                        
                         ["logo"] = (_assets.LoadLogoPng(), "image/png")
                     },
                     Attachments = new()
@@ -91,16 +107,17 @@ namespace LibraryManagementSystem.Controllers
 
                 await _emailSender.SendAsync(msg);
 
-                return Content("? Test email sent successfully. Check Inbox + Spam + Sender 'Sent' folder.");
+                return Content($"? Test email sent successfully to {to}. Check Inbox + Spam.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "? TestUniversityMail failed");
-                return StatusCode(500, "? Failed to send test email. Check Output window for error details.");
+                return StatusCode(500, "? Failed to send test email. Check logs/output for error details.");
             }
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        [AllowAnonymous]
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });

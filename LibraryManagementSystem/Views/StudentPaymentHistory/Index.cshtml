@@ -1,0 +1,74 @@
+﻿@{
+    var finePayments = ViewBag.FinePayments as IEnumerable<dynamic>;
+    var memberships = ViewBag.Memberships as IEnumerable<dynamic>;
+}
+
+<div class="container mt-4">
+    <h2 class="mb-3">My Payment History</h2>
+
+    <h4 class="mt-4">Fine Payments</h4>
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Paid At</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (finePayments != null && finePayments.Any())
+                {
+                    foreach (var p in finePayments)
+                    {
+                        <tr>
+                            <td>@p.Amount</td>
+                            <td>@(p.Status ?? "N/A")</td>
+                            <td>@(p.PaidAt?.ToString("yyyy-MM-dd hh:mm tt") ?? "Not Paid")</td>
+                            <td>@(p.CreatedAt?.ToString("yyyy-MM-dd hh:mm tt") ?? "-")</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="4" class="text-center">No fine payments found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <h4 class="mt-4">Premium Membership Payments</h4>
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Amount</th>
+                    <th>Duration (Days)</th>
+                    <th>Status</th>
+                    <th>Paid At</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (memberships != null && memberships.Any())
+                {
+                    foreach (var m in memberships)
+                    {
+                        <tr>
+                            <td>@m.Amount</td>
+                            <td>@m.DurationDays</td>
+                            <td>@(m.Status ?? "N/A")</td>
+                            <td>@(m.PaidAt?.ToString("yyyy-MM-dd hh:mm tt") ?? m.PurchasedAt?.ToString("yyyy-MM-dd hh:mm tt") ?? "Not Paid")</td>
+                            <td>@(m.CreatedAt?.ToString("yyyy-MM-dd hh:mm tt") ?? "-")</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="5" class="text-center">No membership payments found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

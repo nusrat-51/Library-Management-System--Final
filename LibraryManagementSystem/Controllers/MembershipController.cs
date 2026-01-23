@@ -20,7 +20,7 @@ namespace LibraryManagementSystem.Controllers
             _premiumService = premiumService;
         }
 
-        // ✅ List page
+        // ✅ List page (Barcode/Cash issuing list)
         [HttpGet]
         public async Task<IActionResult> Index(CancellationToken ct)
         {
@@ -29,6 +29,25 @@ namespace LibraryManagementSystem.Controllers
                 .ToListAsync(ct);
 
             return View(list);
+        }
+
+        // ✅ NEW: Online Premium Membership Purchase History (SSLCommerz)
+        // URL: /Membership/History
+        [HttpGet]
+        public async Task<IActionResult> History(CancellationToken ct)
+        {
+            // Show records that are from online payment (has TranId/Status/Amount/PaidAt)
+            // If you want to show ALL memberships in history (including barcode), remove the Where() filter.
+            var history = await _db.PremiumMemberships
+                .Where(x =>
+                    !string.IsNullOrEmpty(x.TranId) ||
+                    !string.IsNullOrEmpty(x.Status) ||
+                    x.Amount > 0 ||
+                    x.PaidAt != null)
+                .OrderByDescending(x => x.PaidAt ?? x.CreatedAt)
+                .ToListAsync(ct);
+
+            return View(history);
         }
 
         // ✅ Create or Re-issue barcode (Not purchased yet)
@@ -88,7 +107,7 @@ namespace LibraryManagementSystem.Controllers
                 existing.StudentEmail = studentEmail;
                 existing.BarcodeHash = _premiumService.HashBarcode(barcode);
 
-                //  keep purchased status as-is (do not break old logic)
+                // keep purchased status as-is (do not break old logic)
                 if (!existing.IsPurchased)
                     existing.CreatedAt = DateTime.Now;
             }
@@ -100,7 +119,7 @@ namespace LibraryManagementSystem.Controllers
             return RedirectToAction("Index");
         }
 
-        //  Mark purchased (after taking 100 taka)
+        // Mark purchased (after taking 100 taka) - cash
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkPurchased(int id, CancellationToken ct)

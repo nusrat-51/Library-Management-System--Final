@@ -1,0 +1,23 @@
+﻿@{
+    ViewData["Title"] = "Membership Payment Failed";
+}
+
+<div class="container py-5">
+    <div class="card shadow-sm border-danger">
+        <div class="card-body p-4">
+            <h2 class="fw-bold text-danger mb-2">❌ Payment Failed</h2>
+            <p class="text-muted mb-4">
+                Your payment was not completed. Please try again.
+            </p>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <a asp-controller="Premium" asp-action="Membership" class="btn btn-primary">
+                    Try Again
+                </a>
+                <a asp-controller="Premium" asp-action="Index" class="btn btn-outline-secondary">
+                    Back to Premium Collection
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

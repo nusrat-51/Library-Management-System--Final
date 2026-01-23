@@ -17,4 +17,6 @@ public class BookApplication: BaseEntities.BaseEntity<int>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public Book? Book { get; set; }
     public int BookId { get; set; }
+    public bool IsFinePaid { get; set; } = false;
+
 }
